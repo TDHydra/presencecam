@@ -128,6 +128,10 @@ void netStartSetupAp(uint32_t ms) {
 }
 
 bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {
+  if (radioOff) {
+    Serial.println("wifi: off because of weak power; fix the power, then press RST");
+    return false;
+  }
   settings.wifiSsid = ssid;
   settings.wifiPass = pass;
   settingsSave();
@@ -198,7 +202,7 @@ static void improvRpc(const uint8_t* d, uint8_t len) {
       improvResult(CMD_INFO, {FW_NAME, FW_VERSION, "ESP32", settings.name});
       break;
     case CMD_SCAN: {
-      int found = WiFi.scanNetworks();
+      int found = radioOff ? 0 : WiFi.scanNetworks();
       for (int i = 0; i < found; i++) {
         improvResult(CMD_SCAN, {WiFi.SSID(i), String(WiFi.RSSI(i)),
                                 WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "NO" : "YES"});

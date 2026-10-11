@@ -17,6 +17,7 @@
 #include "web_page.h"
 
 static WebServer server(80);
+static bool started = false;
 
 static String jsonEscape(const String& s) {
   String o;
@@ -204,6 +205,8 @@ static void updateChunk() {
 }
 
 void webBegin() {
+  if (!powerWifiAllowed()) return;  // no network stack without Wi-Fi; starting the server would crash
+  started = true;
   server.on("/", HTTP_GET, [] { server.send_P(200, "text/html", WEB_PAGE); });
   server.on("/api/status", HTTP_GET, sendStatus);
   server.on("/api/log", HTTP_GET, sendLogTail);
@@ -232,4 +235,6 @@ void webBegin() {
   server.begin();
 }
 
-void webLoop() { server.handleClient(); }
+void webLoop() {
+  if (started) server.handleClient();
+}

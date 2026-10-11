@@ -18,7 +18,12 @@ static bool settled = false;
 
 void powerBegin() {
   bool valid = rtcMagic == MAGIC;
-  if (esp_reset_reason() == ESP_RST_BROWNOUT) brownouts = valid ? rtcBrownouts + 1 : 1;
+  esp_reset_reason_t why = esp_reset_reason();
+  if (why == ESP_RST_BROWNOUT) brownouts = valid ? rtcBrownouts + 1 : 1;
+  // A crash or watchdog reset keeps the count, so it can't restart a brownout loop at full
+  // power. Power-on, RST and a deliberate restart start over.
+  else if (valid && (why == ESP_RST_PANIC || why == ESP_RST_INT_WDT || why == ESP_RST_TASK_WDT || why == ESP_RST_WDT))
+    brownouts = rtcBrownouts;
   else brownouts = 0;
   rtcMagic = MAGIC;
   rtcBrownouts = brownouts;
