@@ -147,13 +147,16 @@ defaults match what the configurator produces.
 pio run                      # both chips; images in .pio/build/<env>/presencecam-merged.bin
 pio run -e esp32 -t upload   # flash an ESP32 board directly
 node --test site/test/*.test.mjs
-python tools/make_site.py && python -m http.server -d _site   # flasher on http://localhost:8000
+tools/serve.sh               # build, test and serve the flasher on port 8000
 ```
 
-GitHub Actions ([build.yml](.github/workflows/build.yml)) runs the tests, builds both chips,
-publishes the flasher to GitHub Pages from `main`, and attaches the images to `v*` tag releases.
-First-time setup: **Settings → Pages → Source: GitHub Actions**. To release, bump
-[`VERSION`](VERSION), commit, `git tag vX.Y.Z && git push --tags`.
+**Testing locally:** `tools/serve.sh` builds both chips, runs the tests and serves the flasher at
+`http://<this machine>:8000`. Web Serial needs https or localhost, so on the computer with the board
+open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, add that address once, and relaunch.
+
+**Releasing:** GitHub Actions ([build.yml](.github/workflows/build.yml)) runs only for releases. Bump
+[`VERSION`](VERSION), commit, then `git tag vX.Y.Z && git push origin main vX.Y.Z`. It runs the tests,
+builds both chips, publishes the flasher to GitHub Pages and attaches the images to the release.
 
 ## Project layout
 

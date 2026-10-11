@@ -1,10 +1,10 @@
 name: Build firmware and web flasher
 
+# Runs only for releases: push a v* tag (git tag v2.1.0 && git push origin v2.1.0), or start
+# it by hand from the Actions tab. Day-to-day testing happens locally with tools/serve.sh.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,6 @@ jobs:
             _site/manifest.json
 
       - uses: actions/upload-pages-artifact@v3
-        if: github.ref == 'refs/heads/main'
         with:
           path: _site
 
@@ -66,7 +65,6 @@ jobs:
           files: _site/firmware/*.bin
 
   deploy:
-    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
