@@ -31,14 +31,21 @@ jobs:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test the pin allocator
+        run: node --test site/test/*.test.mjs
+
       - name: Install PlatformIO
         run: pip install platformio
 
-      - name: Build firmware
+      - name: Build firmware (ESP32 and ESP32-S3)
         run: pio run
 
       - name: Assemble web flasher site
-        run: python tools/make_site.py .pio/build/nodemcu-32s _site
+        run: python tools/make_site.py .pio/build _site
 
       - uses: actions/upload-artifact@v4
         with:
@@ -56,9 +63,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            _site/firmware/presencecam-merged.bin
-            _site/firmware/presencecam-ota.bin
+          files: _site/firmware/*.bin
 
   deploy:
     if: github.ref == 'refs/heads/main'

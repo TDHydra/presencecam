@@ -7,6 +7,7 @@ Import("env")  # noqa: F821  (provided by PlatformIO)
 
 
 def merge(source, target, env):
+    board = env.BoardConfig()
     build = env.subst("$BUILD_DIR")
     out = os.path.join(build, "presencecam-merged.bin")
     esptool = os.path.join(env.PioPlatform().get_package_dir("tool-esptoolpy"), "esptool.py")
@@ -14,9 +15,12 @@ def merge(source, target, env):
     for offset, image in env.get("FLASH_EXTRA_IMAGES", []):
         parts += [offset, env.subst(image)]
     parts += [env.subst("$ESP32_APP_OFFSET"), os.path.join(build, env.subst("${PROGNAME}.bin"))]
+    freq = str(board.get("build.f_flash", "40000000L")).rstrip("L")
     cmd = [
-        env.subst("$PYTHONEXE"), esptool, "--chip", "esp32", "merge_bin", "-o", out,
-        "--flash_mode", "dio", "--flash_freq", "40m", "--flash_size", "4MB",
+        env.subst("$PYTHONEXE"), esptool, "--chip", board.get("build.mcu", "esp32"), "merge_bin", "-o", out,
+        "--flash_mode", "dio",
+        "--flash_freq", "%dm" % (int(freq) // 1000000),
+        "--flash_size", board.get("upload.flash_size", "4MB"),
     ] + parts
     print("Merging firmware image -> " + out)
     env.Execute(" ".join('"%s"' % c for c in cmd))

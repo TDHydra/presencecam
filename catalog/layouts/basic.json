@@ -1,0 +1,5 @@
+{
+  "id": "basic",
+  "name": "Basic",
+  "description": "One row per sensor reading with a bar for ranges, presence on top. Extra rows go to more pages; short-press BOOT to flip. Network and device pages follow."
+}

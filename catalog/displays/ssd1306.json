@@ -1,0 +1,30 @@
+{
+  "id": "ssd1306",
+  "name": "0.96\" OLED 128×64 (SSD1306, I²C)",
+  "short": "0.96\" OLED",
+  "bus": "i2c",
+  "supply": "3v3",
+  "description": "The common 4-pin blue/white/yellow OLED. Pin order differs between sellers: go by the labels.",
+  "pins": [
+    {
+      "label": "GND",
+      "role": "gnd"
+    },
+    {
+      "label": "VCC",
+      "role": "vcc"
+    },
+    {
+      "label": "SCL",
+      "role": "scl"
+    },
+    {
+      "label": "SDA",
+      "role": "sda"
+    }
+  ],
+  "config": {
+    "type": "ssd1306",
+    "addr": 60
+  }
+}

@@ -1,5 +1,5 @@
-// Turns raw radar detections into a steady present / clear state with a hold time,
-// and logs each change.
+// Turns raw detections from every sensor that gives presence into a steady present / clear
+// state with a hold time, and logs each change.
 #pragma once
 #include <Arduino.h>
 
@@ -10,5 +10,6 @@ struct Presence {
   uint32_t visitsToday;    // "present" events since boot (or since midnight once the clock is set)
 };
 
+void presenceBegin();  // sets up the status LED from the hardware config
 void presenceLoop();
 const Presence& presence();

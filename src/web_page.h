@@ -39,13 +39,8 @@ details summary{cursor:pointer;font-weight:600}
  <div class="dot" id="dot"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8z"/></svg></div>
  <div><div class="state" id="state">–</div><div class="mut" id="for"></div></div>
 </div>
-<div class="grid">
- <div class="kv"><span class="mut">Distance</span><b id="dist">–</b></div>
- <div class="kv"><span class="mut">Moving energy</span><b id="me">–</b><div class="bar"><i id="meb"></i></div></div>
- <div class="kv"><span class="mut">Still energy</span><b id="se">–</b><div class="bar"><i id="seb"></i></div></div>
- <div class="kv"><span class="mut">Visits today</span><b id="visits">–</b></div>
-</div>
-<p class="mut" id="radar" style="margin:12px 0 0"></p>
+<div class="grid" id="readings"></div>
+<p class="mut" id="sens" style="margin:12px 0 0"></p>
 </section>
 
 <section class="card"><h2>Event log <span id="vbadge"></span></h2>
@@ -55,13 +50,19 @@ details summary{cursor:pointer;font-weight:600}
 <details style="margin-top:12px"><summary>How the log is protected</summary><p class="mut">Each line carries an HMAC-SHA256 signature made with a secret key that never leaves the device, plus the signature of the line before it. Editing, deleting or reordering lines breaks the chain, and the check above says where. The line counter is kept separately, so deleting the whole log is noticed too. Older lines rotate out after about 48 KB.</p></details>
 </section>
 
+<section class="card"><h2>Hardware</h2>
+<p class="mut" id="hwsum"></p>
+<div class="tw"><table><thead><tr><th>Connection</th><th>GPIO</th></tr></thead><tbody id="pins"></tbody></table></div>
+<p class="mut">To change the board, sensors, display or layout, open the web flasher, choose them there and press <em>Send setup to board</em>. No reflash needed.</p>
+<details><summary>Config JSON</summary><pre class="mono" id="hwjson"></pre></details>
+</section>
+
 <section class="card"><h2>Settings</h2><form id="sf">
 <label for="sname">Device name</label><input id="sname" name="name" maxlength="32">
 <div class="row"><div><label for="hold">Hold time (seconds)</label><input id="hold" name="hold" type="number" min="1" max="3600"></div>
 <div><label for="maxcm">Max distance (cm, LD2410 only)</label><input id="maxcm" name="maxcm" type="number" min="30" max="800"></div></div>
-<div class="row"><div><label for="oleddrv">OLED type</label><select id="oleddrv" name="oleddrv"><option value="0">SSD1306 (0.96")</option><option value="1">SH1106 (1.3")</option></select></div>
-<div><label for="oledflip">OLED orientation</label><select id="oledflip" name="oledflip"><option value="0">Normal</option><option value="1">Upside down</option></select></div></div>
-<label for="oledsleep">Turn the OLED off after nobody is present for (seconds, 0 = never)</label><input id="oledsleep" name="oledsleep" type="number" min="0">
+<div class="row"><div><label for="screenflip">Screen orientation</label><select id="screenflip" name="screenflip"><option value="0">Normal</option><option value="1">Upside down</option></select></div>
+<div><label for="screensleep">Screen off after nobody is present for (s, 0 = never)</label><input id="screensleep" name="screensleep" type="number" min="0"></div></div>
 <button>Save settings</button> <span id="smsg" class="mut"></span></form></section>
 
 <section class="card"><h2>Wi-Fi</h2><p class="mut" id="wstat"></p><form id="wf">
@@ -80,21 +81,19 @@ const dur=s=>s<60?s+' s':s<3600?Math.floor(s/60)+' min '+(s%60)+' s':Math.floor(
 let S=null,formFilled=false;
 async function status(){
  try{S=await (await fetch('/api/status')).json()}catch(e){$('sub').textContent='device not reachable, retrying…';return}
- const r=S.radar;
  $('name').textContent=S.name;document.title=S.name;
- $('sub').textContent=(S.wifi.connected?S.wifi.ip+' · '+S.wifi.host:'setup mode')+' · up '+dur(S.uptime);
+ $('sub').textContent=(S.wifi.connected?S.wifi.ip+' · '+S.wifi.host:'setup mode')+' · up '+dur(S.uptime)+(S.safeMode?' · SAFE MODE':'');
  $('dot').classList.toggle('on',S.present);
- $('state').textContent=S.present?'Someone is here':'Nobody here';
- $('for').textContent='for '+dur(S.stateFor);
- $('dist').textContent=r.uart?(r.moving||r.still?r.distanceCm+' cm':'—'):'n/a';
- $('me').textContent=r.uart?r.movingEnergy+(r.moving?' · '+r.movingCm+' cm':''):'n/a';$('meb').style.width=r.movingEnergy+'%';
- $('se').textContent=r.uart?r.stillEnergy+(r.still?' · '+r.stillCm+' cm':''):'n/a';$('seb').style.width=r.stillEnergy+'%';
- $('visits').textContent=S.visitsToday;
- $('radar').textContent='Radar: '+r.type+' · OUT pin '+(r.out?'high':'low')+(S.oled?'':' · no OLED found');
+ $('state').textContent=!S.presenceSensors?'Sensor readings':S.present?'Someone is here':'Nobody here';
+ $('for').textContent=S.presenceSensors?'for '+dur(S.stateFor)+' · '+S.visitsToday+' visit(s) today':'';
+ $('readings').innerHTML=S.readings.map(r=>{const v=!r.valid?'—':typeof r.value=='boolean'?(r.value?'yes':'no'):(Math.round(r.value*10)/10)+' '+esc(r.unit);
+  const bar=r.max?`<div class="bar"><i style="width:${r.valid?Math.min(100,r.value/r.max*100):0}%"></i></div>`:'';
+  return `<div class="kv"><span class="mut">${esc(r.label)}</span><b>${v}</b>${bar}</div>`}).join('')||'<p class="mut">No sensors set up yet.</p>';
+ $('sens').textContent=S.sensors.map(x=>x.title+': '+x.status).join(' · ')+' · display: '+S.display;
  $('wstat').textContent=S.wifi.connected?'Connected to '+S.wifi.ssid+' ('+S.wifi.rssi+' dBm). Also reachable as http://'+S.wifi.host:(S.wifi.ssid?'Trying to join '+S.wifi.ssid+'…':'Not set up yet.');
  $('fw').textContent='Version '+S.fw+' · free memory '+Math.round(S.heap/1024)+' KB';
  if(!formFilled){formFilled=true;const st=S.settings;$('sname').value=S.name;$('hold').value=st.hold;$('maxcm').value=st.maxcm;
-  $('oleddrv').value=st.oleddrv;$('oledflip').value=st.oledflip?1:0;$('oledsleep').value=st.oledsleep;$('ssid').value=S.wifi.ssid}
+  $('screenflip').value=st.screenflip?1:0;$('screensleep').value=st.screensleep;$('ssid').value=S.wifi.ssid}
 }
 function when(t,up){return t>1700000000?new Date(t*1000).toLocaleString():'uptime '+dur(+up)}
 async function loadLog(){
@@ -117,5 +116,8 @@ $('uf').onsubmit=e=>{e.preventDefault();const f=$('bin').files[0];if(!f)return;c
  x.onload=()=>{$('umsg').textContent=x.responseText+(x.status==200?'. Reloading in 10 s…':'');if(x.status==200)setTimeout(()=>location.reload(),10000)};
  x.open('POST','/update');x.send(fd)};
 async function reboot(){if(confirm('Restart the device?')){await fetch('/api/reboot',{method:'POST'}).catch(()=>{});$('umsg').textContent='Restarting…';setTimeout(()=>location.reload(),8000)}}
-status();loadLog();setInterval(status,1000);setInterval(loadLog,15000);
+async function hardware(){const h=await (await fetch('/api/hardware')).json();const c=h.config;
+ $('hwsum').textContent='Board '+c.board+' · display '+h.display+' · layout '+c.layout+' · '+(c.sensors.length?c.sensors.map(s=>s.type).join(', '):'no sensors')+(h.safeMode?' · SAFE MODE (stored config ignored)':'')+' · config '+h.hash;
+ $('pins').innerHTML=h.pins.map(p=>`<tr><td>${esc(p.what)}</td><td class="mono">GPIO${p.gpio}</td></tr>`).join('');$('hwjson').textContent=JSON.stringify(c,null,1)}
+status();loadLog();hardware();setInterval(status,1000);setInterval(loadLog,15000);
 </script></body></html>)HTML";

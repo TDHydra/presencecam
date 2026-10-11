@@ -1,170 +1,172 @@
 # PresenceCam
 
-A room presence sensor built from an **ESP32 NodeMCU**, a **24 GHz radar** and a small **OLED**.
-It shows whether someone is there, how far away they are, and keeps a **tamper-evident log**
-of every arrival and departure that you can check from its web page.
+Show sensor readings on a small screen and on the web, detect presence, and keep a
+**tamper-evident log** of who came and went, on an ESP32 board.
 
-**Install it from your browser, no tools needed: <https://OWNER.github.io/presencecam/>**
-(Chrome or Edge on a computer.)
+You pick your **board**, **display**, **sensors** and **screen layout** in the web flasher. It
+works out which pin each wire goes to, draws the wiring diagram, installs the firmware and
+sends your setup to the board. Nothing to compile, no pins to edit.
 
-![Wiring diagram](docs/wiring.svg)
+**Web flasher: <https://OWNER.github.io/presencecam/>** (Chrome or Edge on a computer)
 
-## Features
+![Example wiring the flasher draws: ESP32 DevKit with a 0.96" OLED, LD2410 radar and VL53L0X](docs/wiring-example.svg)
 
-- **Radar presence** with an HLK-LD2410B/C (distance, moving and still targets, signal strength), or
-  any radar with an on/off output such as the RCWL-0516.
-- **OLED screen** (0.96" SSD1306 or 1.3" SH1106) with three pages: presence, network, device. The BOOT
-  button flips between them.
-- **Web dashboard** on your network: live status, event log, settings, Wi-Fi, firmware updates over the air.
-- **Signed, chained event log**: every line carries an HMAC-SHA256 signature and links to the line
-  before, so edited, deleted or reordered lines are flagged on the web page.
-- **Easy setup**: the web flasher sends your Wi-Fi details over USB right after installing (Improv).
-  Without it, the board opens a `PresenceCam-XXXX` setup network with a captive portal.
-- **JSON API** (`/api/status`) for scripts and home automation.
+## Supported hardware
 
-## Parts
+| | Supported now | Notes |
+|---|---|---|
+| **Boards** | ESP32 DevKit / NodeMCU ESP-32S (30 pin) | DOIT DevKit V1 layout |
+| | ESP32 DevKitC / NodeMCU-32S (38 pin) | Espressif DevKitC V4 layout |
+| | Waveshare ESP32-S3-LCD-1.47B | Built-in 1.47" LCD and RGB LED. Header order is drawn as a schematic, so wire by the printed GPIO numbers. |
+| **Displays** | 0.96" SSD1306 OLED 128×64 (I²C) | Also works: 1.3" SH1106 (`"type":"sh1106"`) |
+| | Built-in ST7789 LCD 172×320 | On the Waveshare board |
+| **Sensors** | HLK-LD2410B/C 24 GHz radar | UART (distance, moving/still energy) and/or OUT pin (presence) |
+| | VL53L0X laser distance (ToF) | I²C, shares the wires with the OLED. Can also count as presence below a set distance. |
+| **Layouts** | Basic | One row per reading with bars, presence on top, extra pages for more rows |
 
-| Part | Notes |
-|---|---|
-| ESP32 NodeMCU (ESP-32S / ESP32-WROOM-32 devkit) | 30 or 38 pin, CP2102 or CH340 USB. Not the ESP8266 NodeMCU. |
-| HLK-LD2410B or LD2410C radar *(recommended)* | Gives distance and sees people sitting still. RCWL-0516 works too, as on/off only. |
-| 128×64 I²C OLED, 4 pins | SSD1306 0.96" or SH1106 1.3". |
-| Jumper wires, USB data cable | |
+## How it works
 
-## Wiring
-
-| Module pin | ESP32 pin |
-|---|---|
-| OLED VCC | 3V3 |
-| OLED GND | GND |
-| OLED SDA | D21 |
-| OLED SCL | D22 |
-| LD2410 VCC | VIN (5 V) |
-| LD2410 GND | GND |
-| LD2410 TX | D16 (RX2) |
-| LD2410 RX | D17 (TX2) |
-| LD2410 OUT | D27 |
-| RCWL-0516 VIN / GND / OUT | VIN / GND / D27 |
-
-The pins are set in [`src/config.h`](src/config.h) if you need to change them.
-
-## Install
-
-### From the browser (easiest)
-
-1. Open the [web flasher](https://OWNER.github.io/presencecam/) in Chrome or Edge.
-2. Plug in the board, click **Connect & install**, pick the port.
-3. When it finishes, enter your Wi-Fi name and password. The OLED shows the board's address.
-
-### With PlatformIO
-
-```sh
-pio run -t upload        # build and flash
-pio device monitor       # serial console, type "help"
+```
+catalog/*.json ──► web flasher (site/) ──► hardware config JSON ──► firmware (src/)
+boards, sensors,   pick parts, allocate       {"board":…, "i2c":…,     reads it at boot,
+displays, layouts  pins, draw wiring          "sensors":[…], …}        starts drivers
 ```
 
-### With esptool
+1. **Catalog** ([`catalog/`](catalog/)): one JSON file per board, sensor, display and layout. It
+   holds header pin positions, which pins are off-limits, default I²C/UART pins, and how each part
+   is wired.
+2. **Configurator** ([`site/`](site/)): [`allocator.mjs`](site/allocator.mjs) gives every wire a
+   GPIO. I²C parts share one pair, UART parts get a free hardware UART, and plain signals get the
+   first safe pin. Flash, PSRAM, USB and on-board pins are never used, and problems are explained.
+   [`wiring.mjs`](site/wiring.mjs) draws the diagram.
+3. **Install**: ESP Web Tools picks the ESP32 or ESP32-S3 build from the chip it finds, then sets
+   up Wi-Fi over USB (Improv).
+4. **Send setup**: the page sends `config set {…}` over Web Serial. The firmware checks it (pins
+   exist, aren't taken twice, aren't flash/USB), saves it and restarts. You can change parts later
+   the same way, without reinstalling.
 
-Download `presencecam-merged.bin` from the [releases](../../releases) and write it at offset 0:
+The firmware ([`src/`](src/)) has no pin numbers built in, only a default per chip. On an ESP32
+that's the original wiring: OLED on 21/22, LD2410 on 16/17/27. On an ESP32-S3 it's the Waveshare
+LCD.
 
-```sh
-pip install esptool
-esptool.py --chip esp32 write_flash 0x0 presencecam-merged.bin
-```
+## Buttons
+
+| Press | Does |
+|---|---|
+| BOOT, short | Next screen page |
+| BOOT, double | Dim / brighten the screen |
+| BOOT, hold 3 s | Show the web address and a QR code |
+| BOOT, hold 10 s | Forget Wi-Fi, restart into setup |
+| RST, once | Restart |
+| RST, 2× quickly | Open the `PresenceCam-XXXX` setup network for 10 minutes |
+| RST, 3× quickly | Safe mode for one boot: built-in default setup, no sensors |
+
+While BOOT is held, the screen shows what letting go now will do and a bar until the next action.
+Holding BOOT during reset or power-up still enters download mode, for flashing. RST cuts the chip
+off completely, so the firmware counts quick restarts instead of reading the button. The BOOT
+actions can be changed in the hardware config:
+`"buttons":{"short":"next","double":"dim","hold3":"info","hold10":"forget_wifi"}`. The possible
+actions are `none next dim info forget_wifi setup_ap reboot`.
 
 ## Using it
 
-- **OLED:** *PRESENT* / *clear*, distance, moving and still energy, visits today. Short-press **BOOT**
-  for the network page (IP address, signal) and the device page (version, radar type, uptime).
-- **Blue LED:** lit while someone is present.
-- **Hold BOOT 5 s:** forget Wi-Fi and reopen the setup network.
-- **Web page** (`http://<ip>/` or `http://presencecam-xxxx.local/`):
-  - **Hold time:** how long it stays *present* after the last detection.
-  - **Max distance:** LD2410 only. Ignores targets further away, which helps when the radar sees through walls.
-  - **OLED type:** SSD1306 or SH1106, and upside down.
-  - **OLED sleep:** turns the screen off when nobody is there.
-  - **Firmware:** upload `presencecam-ota.bin` to update without a cable.
+- **Screen**: the layout's pages, then *Network* (IP, signal) and *Device* (version, board, uptime).
+- **Web page** (`http://<ip>/` or `http://presencecam-xxxx.local/`): live readings, the event log
+  with a *Verified* badge, the hardware in use (pins), settings (name, hold time, LD2410 max
+  distance, screen flip and sleep), Wi-Fi, firmware update over the air.
+- **Status LED**: lit while someone is present (amber on the Waveshare RGB LED).
 
-### Serial console
-
-At 115200 baud (PlatformIO monitor, or **Logs & console** in the web flasher):
+### Serial console (115200 baud)
 
 ```
-status            firmware, radar, presence, Wi-Fi, OLED, log
-radar [s]         live radar readings for s seconds
-log [n]           last n log lines
-verify            check the log chain
-join SSID PASS    join a network
-forget            forget Wi-Fi
-name / hold / maxcm / oled ssd1306|sh1106|flip
-factory YES       erase everything, including the log key
+status            firmware, sensors, presence, Wi-Fi, display, log
+sensors [s]       live readings for s seconds
+config            show the hardware config and its pins
+config set {...}  replace it (what the web flasher sends), then restart
+config reset      back to this chip's default
+log [n] · verify  the event log and its chain check
+join SSID PASS · forget · setup · name · hold · maxcm · flip · reboot · factory YES
 ```
 
 ### API
 
 | Endpoint | |
 |---|---|
-| `GET /api/status` | Live JSON: `present`, `radar.distanceCm`, energies, Wi-Fi, settings |
-| `GET /api/log?n=50` | Last n log lines |
-| `GET /api/log.txt` | Whole log as a download |
+| `GET /api/status` | Live JSON: `present`, `readings[]` (`label value unit valid max`), sensor status, Wi-Fi, settings |
+| `GET /api/hardware` | The hardware config and the GPIO for each connection |
+| `GET /api/log?n=50` · `/api/log.txt` | Log lines / the whole log |
 | `GET /api/verify` | Chain check result |
-| `POST /api/settings` | Form fields `name hold maxcm oledsleep oleddrv oledflip` |
-| `POST /api/wifi` | Form fields `ssid pass` |
-| `POST /update` | Firmware `.bin` upload |
+| `POST /api/settings` | `name hold maxcm screensleep screenflip` |
+| `POST /api/wifi` | `ssid pass` |
+| `POST /update` | Firmware `.bin` (`presencecam-<chip>-ota.bin`) |
 
 ## The event log
 
-Each event (boot, present, clear, wifi, settings, update) is one line in the board's flash:
+Each event (boot, present, clear, wifi, settings, hardware, update) is one line in flash:
 
 ```
 n|unix_time|uptime_s|event|detail|prev|mac
-42|1791712345|3605|clear|after 87 s|4be1…|91c0…
 ```
 
-`mac` is an HMAC-SHA256 of the rest of the line, keyed with a random secret the board generates the
-first time it starts. `prev` is the previous line's `mac`. The line counter is kept separately from
-the file. So the **Verify** check catches changed lines, removed lines, reordered lines, and an
-emptied log. The log rotates at about 48 KB, keeping the previous file, so the oldest kept line
-then starts mid-chain, which the check reports as expected.
+`mac` is an HMAC-SHA256 of the rest of the line, keyed with a random secret the board makes on its
+first start. `prev` is the previous line's `mac`, and the line counter is stored separately. So
+changed, removed or reordered lines are caught, and so is an emptied log. It protects against edits
+through the web page and to downloaded copies, not against someone who reads the key out of the
+chip's flash. Erasing the board starts a new key at line 1.
 
-This protects the log against edits through the web page and in downloaded copies. Someone with
-the board in hand can read the key out of the flash, so it isn't proof against that. Erasing the
-board (web flasher "erase", or `factory YES`) makes a new key and starts again at line 1.
+## Adding hardware
+
+- **A board** with an ESP32 or ESP32-S3: add `catalog/boards/<id>.json` (see
+  [catalog/README.md](catalog/README.md)). No firmware change.
+- **A sensor**: write a driver class in `src/sensors/` implementing `Sensor`
+  ([sensor.h](src/sensors/sensor.h)). Add it to `makeSensor()`, accept its type in
+  `validate()` ([hwconfig.cpp](src/hwconfig.cpp)), and add `catalog/sensors/<id>.json`.
+- **A display**: a `Gfx` backend in `src/display/` ([gfx.h](src/display/gfx.h)), plus its type
+  in `displayBegin()` and `validate()`, plus `catalog/displays/<id>.json`.
+- **A layout**: a `Layout` in `src/layouts/` ([layout.h](src/layouts/layout.h)), listed in
+  `layoutFind()` and `validate()`, plus `catalog/layouts/<id>.json`.
+
+Then run the tests: `node --test site/test/*.test.mjs`. Among other things, they check that every
+board × display × sensor combination gets conflict-free pins, and that the firmware's built-in
+defaults match what the configurator produces.
+
+## Building
+
+```sh
+pio run                      # both chips; images in .pio/build/<env>/presencecam-merged.bin
+pio run -e esp32 -t upload   # flash an ESP32 board directly
+node --test site/test/*.test.mjs
+python tools/make_site.py && python -m http.server -d _site   # flasher on http://localhost:8000
+```
+
+GitHub Actions ([build.yml](.github/workflows/build.yml)) runs the tests, builds both chips,
+publishes the flasher to GitHub Pages from `main`, and attaches the images to `v*` tag releases.
+First-time setup: **Settings → Pages → Source: GitHub Actions**. To release, bump
+[`VERSION`](VERSION), commit, `git tag vX.Y.Z && git push --tags`.
 
 ## Project layout
 
 ```
+catalog/          boards, sensors, displays, layouts (JSON)
+site/             web flasher: index.html, allocator.mjs, wiring.mjs, serial.mjs, configurator.mjs, test/
 src/
-  main.cpp       setup/loop, BOOT button
-  config.h       pins and defaults
-  radar.*        LD2410 UART parser + OUT pin
-  presence.*     hold time, present/clear events
-  display.*      OLED pages (U8g2)
-  eventlog.*     signed, chained log in LittleFS
-  net.*          Wi-Fi, setup access point, mDNS, Improv Serial
-  web.*          web server and API; web_page.h is the dashboard
-  console.*      serial commands
-  settings.*     settings in NVS
-site/            web flasher page (ESP Web Tools)
-tools/           build helpers: version, merged image, site assembly
-docs/wiring.svg
-legacy-s3/       notes from the original ESP32-S3 camera version
+  main.cpp        startup and main loop
+  hwconfig.*      the hardware config: defaults, validation, storage
+  sensors/        Sensor interface + LD2410, VL53L0X
+  display/        Gfx interface + OLED (U8g2) and ST7789 (LovyanGFX) backends; display.cpp runs pages
+  layouts/        Basic layout
+  buttons.*       BOOT gestures and RST multi-tap
+  presence.*      hold time, present/clear events, status LED
+  eventlog.*      signed, chained log
+  net.*           Wi-Fi, setup network, mDNS, Improv
+  web.*           web page and API (web_page.h is the dashboard)
+  console.*       serial commands
+tools/            version, merged image, site assembly
+legacy-s3/        notes from the original ESP32-S3 camera version
 ```
-
-## Releases and the web flasher
-
-GitHub Actions ([`.github/workflows/build.yml`](.github/workflows/build.yml)) builds every push. On
-`main` it publishes the web flasher to GitHub Pages; on a `v*` tag it attaches the binaries to the
-release. To make a release, bump [`VERSION`](VERSION), commit, then `git tag v2.0.1 && git push --tags`.
-
-First-time setup of a fork: **Settings → Pages → Source: GitHub Actions**.
-
-To try the flasher locally: `pio run && python tools/make_site.py && python -m http.server -d _site`,
-then open <http://localhost:8000> (Web Serial needs https or localhost).
 
 ## History
 
-PresenceCam started as a battery-powered motion **camera** on a Waveshare ESP32-S3-LCD-1.47B:
-PIR wake, an Arducam Mega 3MP, a VL53L0X distance sensor, photos to SD card, and the same signed
-log idea so photos couldn't be quietly deleted. Version 2 swaps that for parts that are cheap and
-easy to get: a NodeMCU, a radar and an OLED. The original notes are in [`legacy-s3/`](legacy-s3/).
+PresenceCam started as a battery-powered motion **camera** on the Waveshare ESP32-S3-LCD-1.47B:
+PIR wake, an Arducam Mega 3MP, a VL53L0X, photos to SD card, and the same signed log so photos
+couldn't be quietly deleted. Its notes are in [`legacy-s3/`](legacy-s3/).

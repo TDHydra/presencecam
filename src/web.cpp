@@ -10,7 +10,8 @@
 #include "eventlog.h"
 #include "net.h"
 #include "presence.h"
-#include "radar.h"
+#include "hwconfig.h"
+#include "sensors/sensor.h"
 #include "settings.h"
 #include "web_page.h"
 
@@ -28,37 +29,79 @@ static String jsonEscape(const String& s) {
 
 static void sendStatus() {
   const Presence& p = presence();
-  const RadarState& r = radar();
   uint32_t now = millis();
-  String j;
-  j.reserve(700);
-  j += "{\"name\":\"" + jsonEscape(settings.name) + "\"";
-  j += ",\"fw\":\"" FW_VERSION "\"";
-  j += ",\"present\":" + String(p.present ? "true" : "false");
-  j += ",\"stateFor\":" + String((now - p.sinceMs) / 1000);
-  j += ",\"visitsToday\":" + String(p.visitsToday);
-  j += ",\"radar\":{\"type\":\"" + String(radarType()) + "\",\"uart\":" + (r.uart ? "true" : "false");
-  j += ",\"out\":" + String(r.outPin ? "true" : "false");
-  j += ",\"detected\":" + String(r.detected ? "true" : "false");
-  j += ",\"moving\":" + String(r.moving ? "true" : "false");
-  j += ",\"still\":" + String(r.still ? "true" : "false");
-  j += ",\"movingCm\":" + String(r.movingCm) + ",\"stillCm\":" + String(r.stillCm);
-  j += ",\"distanceCm\":" + String(r.distanceCm);
-  j += ",\"movingEnergy\":" + String(r.movingEnergy) + ",\"stillEnergy\":" + String(r.stillEnergy) + "}";
-  j += ",\"settings\":{\"hold\":" + String(settings.holdSeconds) + ",\"maxcm\":" + String(settings.maxCm);
-  j += ",\"oledsleep\":" + String(settings.oledSleepS) + ",\"oleddrv\":" + String(settings.oledDriver);
-  j += ",\"oledflip\":" + String(settings.oledFlip ? "true" : "false") + "}";
-  j += ",\"oled\":" + String(displayFound() ? "true" : "false");
-  j += ",\"wifi\":{\"ssid\":\"" + jsonEscape(settings.wifiSsid) + "\",\"connected\":" + (netConnected() ? "true" : "false");
-  j += ",\"ip\":\"" + (netConnected() ? WiFi.localIP().toString() : String("")) + "\"";
-  j += ",\"rssi\":" + String(netConnected() ? WiFi.RSSI() : 0);
-  j += ",\"ap\":" + String(netApActive() ? "true" : "false") + ",\"host\":\"" + netHostname() + ".local\"}";
-  j += ",\"time\":" + String((uint32_t)time(nullptr));
-  j += ",\"uptime\":" + String(now / 1000);
-  j += ",\"nextLine\":" + String(logNextLine());
-  j += ",\"heap\":" + String(ESP.getFreeHeap());
-  j += "}";
-  server.send(200, "application/json", j);
+  JsonDocument j;
+  j["name"] = settings.name;
+  j["fw"] = FW_VERSION;
+  j["chip"] = FW_CHIP;
+  j["board"] = hwBoardName();
+  j["safeMode"] = hwSafeMode;
+  j["presenceSensors"] = sensorsGivePresence();
+  j["present"] = p.present;
+  j["stateFor"] = (now - p.sinceMs) / 1000;
+  j["visitsToday"] = p.visitsToday;
+
+  JsonArray sensors = j["sensors"].to<JsonArray>();
+  for (int i = 0; i < sensorsCount(); i++) {
+    Sensor* s = sensorAt(i);
+    JsonObject o = sensors.add<JsonObject>();
+    o["type"] = s->type();
+    o["title"] = s->title();
+    o["ok"] = s->ok;
+    o["status"] = s->status();
+  }
+  JsonArray readings = j["readings"].to<JsonArray>();
+  sensorsForEachReading([](Sensor& s, const Reading& r, void* ctx) {
+    JsonObject o = ((JsonArray*)ctx)->add<JsonObject>();
+    o["sensor"] = s.type();
+    o["label"] = r.label;
+    o["unit"] = r.unit;
+    o["valid"] = r.valid;
+    if (r.boolean) o["value"] = r.value != 0;
+    else o["value"] = r.value;
+    if (r.max > 0) o["max"] = r.max;
+  }, &readings);
+
+  JsonObject st = j["settings"].to<JsonObject>();
+  st["hold"] = settings.holdSeconds;
+  st["maxcm"] = settings.maxCm;
+  st["screensleep"] = settings.screenSleepS;
+  st["screenflip"] = settings.screenFlip;
+  j["display"] = displayDescribe();
+
+  JsonObject w = j["wifi"].to<JsonObject>();
+  w["ssid"] = settings.wifiSsid;
+  w["connected"] = netConnected();
+  w["ip"] = netConnected() ? WiFi.localIP().toString() : String("");
+  w["rssi"] = netConnected() ? WiFi.RSSI() : 0;
+  w["ap"] = netApActive();
+  w["host"] = netHostname() + ".local";
+
+  j["time"] = (uint32_t)time(nullptr);
+  j["uptime"] = now / 1000;
+  j["nextLine"] = logNextLine();
+  j["heap"] = ESP.getFreeHeap();
+  String out;
+  serializeJson(j, out);
+  server.send(200, "application/json", out);
+}
+
+// The active hardware config plus a flat pin list for the "Hardware" card.
+static void sendHardware() {
+  JsonDocument j;
+  j["config"] = hw;
+  j["safeMode"] = hwSafeMode;
+  j["hash"] = String(hwHash(), HEX);
+  j["display"] = displayDescribe();
+  JsonArray pins = j["pins"].to<JsonArray>();
+  hwForEachPin([](const String& what, int gpio, void* ctx) {
+    JsonObject o = ((JsonArray*)ctx)->add<JsonObject>();
+    o["what"] = what;
+    o["gpio"] = gpio;
+  }, &pins);
+  String out;
+  serializeJson(j, out);
+  server.send(200, "application/json", out);
 }
 
 static void sendLogTail() {
@@ -94,20 +137,12 @@ static void postSettings() {
   }
   if (server.hasArg("hold")) settings.holdSeconds = constrain(server.arg("hold").toInt(), 1, 3600);
   if (server.hasArg("maxcm")) settings.maxCm = constrain(server.arg("maxcm").toInt(), 30, 800);
-  if (server.hasArg("oledsleep")) settings.oledSleepS = constrain(server.arg("oledsleep").toInt(), 0, 86400);
-  bool oledChanged = false;
-  if (server.hasArg("oleddrv")) {
-    uint8_t d = server.arg("oleddrv").toInt() ? 1 : 0;
-    oledChanged |= d != settings.oledDriver;
-    settings.oledDriver = d;
-  }
-  if (server.hasArg("oledflip")) {
-    bool f = server.arg("oledflip") == "1" || server.arg("oledflip") == "true";
-    oledChanged |= f != settings.oledFlip;
-    settings.oledFlip = f;
+  if (server.hasArg("screensleep")) settings.screenSleepS = constrain(server.arg("screensleep").toInt(), 0, 86400);
+  if (server.hasArg("screenflip")) {
+    settings.screenFlip = server.arg("screenflip") == "1" || server.arg("screenflip") == "true";
+    displayApplyFlip();
   }
   settingsSave();
-  if (oledChanged) displayBegin();
   logEvent("settings", "hold " + String(settings.holdSeconds) + " s, max " + String(settings.maxCm) + " cm" + changed);
   sendStatus();
 }
@@ -165,6 +200,7 @@ void webBegin() {
   server.on("/api/log", HTTP_GET, sendLogTail);
   server.on("/api/log.txt", HTTP_GET, sendLogFile);
   server.on("/api/verify", HTTP_GET, sendVerify);
+  server.on("/api/hardware", HTTP_GET, sendHardware);
   server.on("/api/settings", HTTP_GET, sendStatus);
   server.on("/api/settings", HTTP_POST, postSettings);
   server.on("/api/wifi", HTTP_POST, postWifi);

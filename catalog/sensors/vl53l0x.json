@@ -1,0 +1,20 @@
+{
+  "id": "vl53l0x",
+  "name": "VL53L0X laser distance (ToF)",
+  "short": "VL53L0X distance",
+  "bus": "i2c",
+  "address": "0x29",
+  "supply": "3v3",
+  "presence": false,
+  "description": "Measures distance to whatever is in front of it, up to about 2 m. Shares the I²C wires with the OLED. Peel off the protective film.",
+  "pins": [
+    {"label": "VIN", "role": "vcc"},
+    {"label": "GND", "role": "gnd"},
+    {"label": "SCL", "role": "scl"},
+    {"label": "SDA", "role": "sda"}
+  ],
+  "options": [
+    {"key": "presenceMm", "label": "Also count as presence when something is closer than (mm, 0 = off)", "type": "number", "default": 0, "min": 0, "max": 2000}
+  ],
+  "readings": ["ToF distance mm"]
+}

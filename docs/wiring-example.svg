@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 705 630" width="705" height="630" font-family="system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="12">
+<title>ESP32 DevKit / NodeMCU ESP-32S, 30 pins</title>
+<rect width="705" height="630" rx="12" fill="#ffffff"/>
+<text x="20" y="30" font-size="16" font-weight="700" fill="#1d2330">ESP32 DevKit / NodeMCU ESP-32S, 30 pins</text>
+<rect x="218" y="74" width="170" height="470" rx="10" fill="#1d2939"/>
+<text x="303" y="100" text-anchor="middle" fill="#fff" font-weight="600">ESP32 DevKit (30 pin)</text>
+<text x="303" y="118" text-anchor="middle" fill="#d0d5dd" font-size="11">top view, USB at the bottom</text>
+<rect x="283" y="532" width="40" height="18" rx="3" fill="#d0d5dd"/>
+<text x="228" y="148" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">EN</text>
+<circle cx="218" cy="144" r="2.5" fill="#667085"/>
+<text x="228" y="172" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">VP</text>
+<circle cx="218" cy="168" r="2.5" fill="#667085"/>
+<text x="228" y="196" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">VN</text>
+<circle cx="218" cy="192" r="2.5" fill="#667085"/>
+<text x="228" y="220" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D34</text>
+<circle cx="218" cy="216" r="2.5" fill="#667085"/>
+<text x="228" y="244" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D35</text>
+<circle cx="218" cy="240" r="2.5" fill="#667085"/>
+<text x="228" y="268" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D32</text>
+<circle cx="218" cy="264" r="2.5" fill="#667085"/>
+<text x="228" y="292" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D33</text>
+<circle cx="218" cy="288" r="2.5" fill="#667085"/>
+<text x="228" y="316" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D25</text>
+<circle cx="218" cy="312" r="2.5" fill="#667085"/>
+<text x="228" y="340" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D26</text>
+<circle cx="218" cy="336" r="2.5" fill="#667085"/>
+<text x="228" y="364" text-anchor="start" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">D27</text>
+<circle cx="218" cy="360" r="4" fill="#fcd34d"/>
+<text x="228" y="388" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D14</text>
+<circle cx="218" cy="384" r="2.5" fill="#667085"/>
+<text x="228" y="412" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D12</text>
+<circle cx="218" cy="408" r="2.5" fill="#667085"/>
+<text x="228" y="436" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D13</text>
+<circle cx="218" cy="432" r="2.5" fill="#667085"/>
+<text x="228" y="460" text-anchor="start" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">GND</text>
+<circle cx="218" cy="456" r="2.5" fill="#667085"/>
+<text x="228" y="484" text-anchor="start" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">VIN</text>
+<circle cx="218" cy="480" r="4" fill="#fcd34d"/>
+<text x="378" y="148" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D23</text>
+<circle cx="388" cy="144" r="2.5" fill="#667085"/>
+<text x="378" y="172" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">D22</text>
+<circle cx="388" cy="168" r="4" fill="#fcd34d"/>
+<text x="378" y="196" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">TX0</text>
+<circle cx="388" cy="192" r="2.5" fill="#667085"/>
+<text x="378" y="220" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">RX0</text>
+<circle cx="388" cy="216" r="2.5" fill="#667085"/>
+<text x="378" y="244" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">D21</text>
+<circle cx="388" cy="240" r="4" fill="#fcd34d"/>
+<text x="378" y="268" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D19</text>
+<circle cx="388" cy="264" r="2.5" fill="#667085"/>
+<text x="378" y="292" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D18</text>
+<circle cx="388" cy="288" r="2.5" fill="#667085"/>
+<text x="378" y="316" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D5</text>
+<circle cx="388" cy="312" r="2.5" fill="#667085"/>
+<text x="378" y="340" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">TX2</text>
+<circle cx="388" cy="336" r="4" fill="#fcd34d"/>
+<text x="378" y="364" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">RX2</text>
+<circle cx="388" cy="360" r="4" fill="#fcd34d"/>
+<text x="378" y="388" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D4</text>
+<circle cx="388" cy="384" r="2.5" fill="#667085"/>
+<text x="378" y="412" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D2</text>
+<circle cx="388" cy="408" r="2.5" fill="#667085"/>
+<text x="378" y="436" text-anchor="end" fill="#8b93a3" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">D15</text>
+<circle cx="388" cy="432" r="2.5" fill="#667085"/>
+<text x="378" y="460" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">GND</text>
+<circle cx="388" cy="456" r="4" fill="#fcd34d"/>
+<text x="378" y="484" text-anchor="end" fill="#ffffff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" font-weight="700">3V3</text>
+<circle cx="388" cy="480" r="4" fill="#fcd34d"/>
+<path d="M535 104 H460 V456 H388" fill="none" stroke="#344054" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 128 H487 V480 H388" fill="none" stroke="#d92d20" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 152 H451 V168 H388" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 4"/>
+<path d="M535 176 H442 V240 H388" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 254 H505 V60 H200 V480 H218" fill="none" stroke="#f79009" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 278 H469 V456 H388" fill="none" stroke="#344054" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 302 H433 V360 H388" fill="none" stroke="#7a5af8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 326 H424 V336 H388" fill="none" stroke="#7a5af8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 4"/>
+<path d="M535 350 H514 V51 H191 V360 H218" fill="none" stroke="#12a150" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 428 H496 V480 H388" fill="none" stroke="#d92d20" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 452 H478 V456 H388" fill="none" stroke="#344054" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M535 476 H415 V168 H388" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 4"/>
+<path d="M535 500 H406 V240 H388" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="535" y="74" width="150" height="126" rx="8" fill="#14532d"/>
+<text x="610" y="92" text-anchor="middle" fill="#fff" font-weight="600" font-size="11">0.96&quot; OLED</text>
+<text x="545" y="108" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">GND</text>
+<circle cx="535" cy="104" r="4" fill="#fcd34d"/>
+<text x="545" y="132" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">VCC</text>
+<circle cx="535" cy="128" r="4" fill="#fcd34d"/>
+<text x="545" y="156" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">SCL</text>
+<circle cx="535" cy="152" r="4" fill="#fcd34d"/>
+<text x="545" y="180" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">SDA</text>
+<circle cx="535" cy="176" r="4" fill="#fcd34d"/>
+<rect x="535" y="224" width="150" height="150" rx="8" fill="#14532d"/>
+<text x="610" y="242" text-anchor="middle" fill="#fff" font-weight="600" font-size="11">LD2410 radar</text>
+<text x="545" y="258" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">VCC</text>
+<circle cx="535" cy="254" r="4" fill="#fcd34d"/>
+<text x="545" y="282" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">GND</text>
+<circle cx="535" cy="278" r="4" fill="#fcd34d"/>
+<text x="545" y="306" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">TX</text>
+<circle cx="535" cy="302" r="4" fill="#fcd34d"/>
+<text x="545" y="330" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">RX</text>
+<circle cx="535" cy="326" r="4" fill="#fcd34d"/>
+<text x="545" y="354" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">OUT</text>
+<circle cx="535" cy="350" r="4" fill="#fcd34d"/>
+<rect x="535" y="398" width="150" height="126" rx="8" fill="#14532d"/>
+<text x="610" y="416" text-anchor="middle" fill="#fff" font-weight="600" font-size="11">VL53L0X distance</text>
+<text x="545" y="432" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">VIN</text>
+<circle cx="535" cy="428" r="4" fill="#fcd34d"/>
+<text x="545" y="456" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">GND</text>
+<circle cx="535" cy="452" r="4" fill="#fcd34d"/>
+<text x="545" y="480" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">SCL</text>
+<circle cx="535" cy="476" r="4" fill="#fcd34d"/>
+<text x="545" y="504" text-anchor="start" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">SDA</text>
+<circle cx="535" cy="500" r="4" fill="#fcd34d"/>
+<line x1="20" y1="578" x2="42" y2="578" stroke="#d92d20" stroke-width="3" stroke-linecap="round"/>
+<text x="48" y="582" fill="#1d2330" font-size="11">3.3 V</text>
+<line x1="90" y1="578" x2="112" y2="578" stroke="#f79009" stroke-width="3" stroke-linecap="round"/>
+<text x="118" y="582" fill="#1d2330" font-size="11">5 V</text>
+<line x1="148" y1="578" x2="170" y2="578" stroke="#344054" stroke-width="3" stroke-linecap="round"/>
+<text x="176" y="582" fill="#1d2330" font-size="11">GND</text>
+<line x1="206" y1="578" x2="228" y2="578" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+<text x="234" y="582" fill="#1d2330" font-size="11">I²C (SDA solid, SCL dashed)</text>
+<line x1="408" y1="578" x2="430" y2="578" stroke="#7a5af8" stroke-width="3" stroke-linecap="round"/>
+<text x="436" y="582" fill="#1d2330" font-size="11">UART, crossed (TX→RX, RX→TX)</text>
+<line x1="616" y1="578" x2="638" y2="578" stroke="#12a150" stroke-width="3" stroke-linecap="round"/>
+<text x="644" y="582" fill="#1d2330" font-size="11">signal</text>
+</svg>

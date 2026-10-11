@@ -1,0 +1,7 @@
+{
+  "id": "none",
+  "name": "No display",
+  "short": "No display",
+  "bus": "none",
+  "description": "Readings are still on the web page and serial console."
+}

@@ -1,0 +1,7 @@
+{
+  "id": "builtin",
+  "name": "The board's built-in screen",
+  "short": "Built-in screen",
+  "bus": "builtin",
+  "description": "Uses the screen soldered on the board; no wiring."
+}

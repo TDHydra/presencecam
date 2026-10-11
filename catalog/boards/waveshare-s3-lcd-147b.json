@@ -1,0 +1,170 @@
+{
+  "id": "waveshare-s3-lcd-147b",
+  "name": "Waveshare ESP32-S3-LCD-1.47B",
+  "short": "ESP32-S3-LCD-1.47B",
+  "chip": "ESP32-S3",
+  "notes": "Has a 1.47\" 172x320 LCD, RGB LED, microSD slot and battery charger on board. Waveshare doesn't publish the header order in text, so the diagram shows the free GPIOs as a schematic: wire by the GPIO numbers printed on the board. Check that your board has a 5V pin before wiring a 5 V part; otherwise power it from the USB 5 V.",
+  "positionsVerified": false,
+  "headers": {
+    "left": [
+      {
+        "label": "5V",
+        "power": "5v"
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "3V3",
+        "power": "3v3"
+      },
+      {
+        "label": "GPIO1",
+        "gpio": 1
+      },
+      {
+        "label": "GPIO2",
+        "gpio": 2
+      },
+      {
+        "label": "GPIO4",
+        "gpio": 4
+      },
+      {
+        "label": "GPIO5",
+        "gpio": 5
+      },
+      {
+        "label": "GPIO6",
+        "gpio": 6
+      },
+      {
+        "label": "GPIO7",
+        "gpio": 7
+      }
+    ],
+    "right": [
+      {
+        "label": "GPIO8",
+        "gpio": 8
+      },
+      {
+        "label": "GPIO9",
+        "gpio": 9
+      },
+      {
+        "label": "GPIO10",
+        "gpio": 10
+      },
+      {
+        "label": "GPIO11",
+        "gpio": 11
+      },
+      {
+        "label": "GPIO12",
+        "gpio": 12
+      },
+      {
+        "label": "GPIO13",
+        "gpio": 13
+      },
+      {
+        "label": "GPIO47",
+        "gpio": 47
+      },
+      {
+        "label": "GPIO48",
+        "gpio": 48
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      }
+    ]
+  },
+  "forbidden": {
+    "19": "USB D-",
+    "20": "USB D+",
+    "26": "flash",
+    "27": "flash",
+    "28": "flash",
+    "29": "flash",
+    "30": "flash",
+    "31": "flash",
+    "32": "flash",
+    "33": "PSRAM",
+    "34": "PSRAM",
+    "35": "PSRAM",
+    "36": "PSRAM",
+    "37": "PSRAM"
+  },
+  "reserved": {
+    "0": "BOOT button",
+    "3": "strapping pin",
+    "14": "SD card",
+    "15": "SD card",
+    "16": "SD card",
+    "17": "SD card",
+    "18": "SD card",
+    "21": "SD card",
+    "38": "RGB LED",
+    "39": "LCD reset",
+    "40": "LCD clock",
+    "41": "LCD data/command",
+    "42": "LCD chip select",
+    "45": "LCD data",
+    "46": "LCD backlight"
+  },
+  "i2c": {
+    "sda": 1,
+    "scl": 2
+  },
+  "uarts": [
+    {
+      "num": 1,
+      "rx": 4,
+      "tx": 5
+    },
+    {
+      "num": 2,
+      "rx": 6,
+      "tx": 7
+    }
+  ],
+  "digitalPrefer": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    47,
+    48
+  ],
+  "led": 38,
+  "ledType": "ws2812",
+  "button": 0,
+  "displays": [
+    "builtin",
+    "ssd1306",
+    "none"
+  ],
+  "builtinDisplay": {
+    "name": "Built-in 1.47\" LCD (ST7789, 172x320)",
+    "config": {
+      "type": "st7789",
+      "mosi": 45,
+      "sclk": 40,
+      "cs": 42,
+      "dc": 41,
+      "rst": 39,
+      "bl": 46,
+      "w": 172,
+      "h": 320,
+      "xoff": 34,
+      "yoff": 0,
+      "invert": true
+    }
+  }
+}

@@ -1,74 +1,68 @@
-// PresenceCam: radar presence sensor with an OLED, a web dashboard and a tamper-evident
-// event log, for an ESP32 NodeMCU (ESP-32S) board. See README.md for wiring.
+// PresenceCam: shows sensor data on a small screen and the web, detects presence, and keeps
+// a tamper-evident event log. The board, sensors, display and layout come from the hardware
+// config written by the web flasher (see hwconfig.h). README.md has the details.
 #include <Arduino.h>
+#include <Wire.h>
 #include <esp_system.h>
 
+#include "buttons.h"
 #include "config.h"
 #include "console.h"
 #include "display.h"
 #include "eventlog.h"
+#include "hwconfig.h"
 #include "net.h"
 #include "presence.h"
-#include "radar.h"
+#include "sensors/sensor.h"
 #include "settings.h"
 #include "web.h"
 
 static const char* resetReason() {
   switch (esp_reset_reason()) {
-    case ESP_RST_POWERON: return "power-on";
+    case ESP_RST_POWERON: return "power-on/RST";
     case ESP_RST_SW: return "restart";
     case ESP_RST_PANIC: return "crash";
     case ESP_RST_INT_WDT:
     case ESP_RST_TASK_WDT:
     case ESP_RST_WDT: return "watchdog";
     case ESP_RST_BROWNOUT: return "brownout (weak USB power?)";
-    case ESP_RST_EXT: return "reset button";
+    case ESP_RST_EXT: return "reset pin";
     default: return "other";
   }
 }
 
-// BOOT button: short press = next OLED page, hold 5 s = forget Wi-Fi and open setup.
-static void buttonLoop() {
-  static bool was = false;
-  static uint32_t downAt = 0;
-  static bool longDone = false;
-  bool down = digitalRead(PIN_BUTTON) == LOW;
-  uint32_t now = millis();
-  if (down && !was) { downAt = now; longDone = false; }
-  if (down && !longDone && now - downAt > 5000) {
-    longDone = true;
-    displayMessage("Wi-Fi reset", "restarting...", 3000);
-    Serial.println("button: held 5 s, forgetting Wi-Fi");
-    settingsForgetWifi();
-    delay(1500);
-    ESP.restart();
-  }
-  if (!down && was && !longDone && now - downAt > 30) displayNextPage();
-  was = down;
-}
-
 void setup() {
+  Serial.setRxBufferSize(2048);  // room for a whole "config set {...}" line
   Serial.begin(115200);
-  pinMode(PIN_LED, OUTPUT);
-  pinMode(PIN_BUTTON, INPUT_PULLUP);
+  int taps = buttonsCountResetTaps();
 
   settingsLoad();
+  hwBegin(taps >= 3);
+  JsonVariantConst i2c = hw["i2c"];
+  if (hwPin(i2c, "sda") >= 0 && hwPin(i2c, "scl") >= 0) Wire.begin(hwPin(i2c, "sda"), hwPin(i2c, "scl"));
+
   displayBegin();
-  displayMessage(FW_NAME, FW_VERSION, 1500);
+  displayMessage(FW_NAME, hwSafeMode ? "SAFE MODE" : FW_VERSION, 1500);
   displayLoop();
-  radarBegin();
+  sensorsBegin();
+  presenceBegin();
+  buttonsBegin();
   logBegin();
-  logEvent("boot", String("fw ") + FW_VERSION + ", " + resetReason());
+  logEvent("boot", String("fw ") + FW_VERSION + ", " + resetReason() + (hwSafeMode ? ", safe mode" : ""));
   netBegin();
+  if (taps == 2) {
+    Serial.println("rst: double tap, opening the setup network for 10 minutes");
+    netStartSetupAp(10 * 60 * 1000);
+  }
   webBegin();
   printBanner(resetReason());
 }
 
 void loop() {
   while (Serial.available()) improvFeed(Serial.read(), consoleByte);
-  radarLoop();
+  sensorsLoop();
   presenceLoop();
-  buttonLoop();
+  buttonsLoop();
   netLoop();
   webLoop();
   displayLoop();

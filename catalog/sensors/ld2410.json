@@ -1,0 +1,21 @@
+{
+  "id": "ld2410",
+  "name": "HLK-LD2410 24 GHz radar (B or C)",
+  "short": "LD2410 radar",
+  "bus": "uart",
+  "supply": "5v",
+  "presence": true,
+  "description": "Detects people moving and sitting still, with distance. Wire TX/RX for distance and signal strength, OUT for plain on/off; both is best.",
+  "pins": [
+    {"label": "VCC", "role": "vcc"},
+    {"label": "GND", "role": "gnd"},
+    {"label": "TX", "role": "uart_rx", "key": "rx", "group": "uart"},
+    {"label": "RX", "role": "uart_tx", "key": "tx", "group": "uart"},
+    {"label": "OUT", "role": "digital_in", "key": "out", "group": "out"}
+  ],
+  "groups": [
+    {"id": "uart", "label": "TX/RX: distance and signal strength", "default": true},
+    {"id": "out", "label": "OUT: presence on/off", "default": true}
+  ],
+  "readings": ["Radar (yes/no)", "Distance cm", "Moving energy %", "Still energy %"]
+}

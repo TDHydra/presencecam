@@ -1,0 +1,180 @@
+{
+  "id": "esp32-devkit-30",
+  "name": "ESP32 DevKit / NodeMCU ESP-32S, 30 pins",
+  "short": "ESP32 DevKit (30 pin)",
+  "chip": "ESP32",
+  "notes": "DOIT ESP32 DevKit V1 layout. Pins listed top to bottom with the USB port at the bottom.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      {
+        "label": "EN"
+      },
+      {
+        "label": "VP",
+        "gpio": 36
+      },
+      {
+        "label": "VN",
+        "gpio": 39
+      },
+      {
+        "label": "D34",
+        "gpio": 34
+      },
+      {
+        "label": "D35",
+        "gpio": 35
+      },
+      {
+        "label": "D32",
+        "gpio": 32
+      },
+      {
+        "label": "D33",
+        "gpio": 33
+      },
+      {
+        "label": "D25",
+        "gpio": 25
+      },
+      {
+        "label": "D26",
+        "gpio": 26
+      },
+      {
+        "label": "D27",
+        "gpio": 27
+      },
+      {
+        "label": "D14",
+        "gpio": 14
+      },
+      {
+        "label": "D12",
+        "gpio": 12
+      },
+      {
+        "label": "D13",
+        "gpio": 13
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "VIN",
+        "power": "5v"
+      }
+    ],
+    "right": [
+      {
+        "label": "D23",
+        "gpio": 23
+      },
+      {
+        "label": "D22",
+        "gpio": 22
+      },
+      {
+        "label": "TX0",
+        "gpio": 1
+      },
+      {
+        "label": "RX0",
+        "gpio": 3
+      },
+      {
+        "label": "D21",
+        "gpio": 21
+      },
+      {
+        "label": "D19",
+        "gpio": 19
+      },
+      {
+        "label": "D18",
+        "gpio": 18
+      },
+      {
+        "label": "D5",
+        "gpio": 5
+      },
+      {
+        "label": "TX2",
+        "gpio": 17
+      },
+      {
+        "label": "RX2",
+        "gpio": 16
+      },
+      {
+        "label": "D4",
+        "gpio": 4
+      },
+      {
+        "label": "D2",
+        "gpio": 2
+      },
+      {
+        "label": "D15",
+        "gpio": 15
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "3V3",
+        "power": "3v3"
+      }
+    ]
+  },
+  "forbidden": {
+    "1": "USB serial TX",
+    "3": "USB serial RX",
+    "6": "flash",
+    "7": "flash",
+    "8": "flash",
+    "9": "flash",
+    "10": "flash",
+    "11": "flash"
+  },
+  "reserved": {
+    "0": "BOOT button",
+    "2": "on-board LED"
+  },
+  "i2c": {
+    "sda": 21,
+    "scl": 22
+  },
+  "uarts": [
+    {
+      "num": 2,
+      "rx": 16,
+      "tx": 17
+    }
+  ],
+  "digitalPrefer": [
+    27,
+    26,
+    25,
+    33,
+    32,
+    34,
+    35,
+    14,
+    13,
+    4,
+    18,
+    19,
+    23
+  ],
+  "led": 2,
+  "ledType": "gpio",
+  "button": 0,
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

@@ -77,7 +77,7 @@ void netLoop() {
     if (MDNS.begin(netHostname().c_str())) MDNS.addService("http", "tcp", 80);
     displayMessage("Wi-Fi connected", WiFi.localIP().toString(), 5000);
     logEvent("wifi", WiFi.localIP().toString());
-    if (apOn) apOffAt = now + 60000;  // give the setup page time to show the new address
+    if (apOn) apOffAt = max(apOffAt, now + 60000);  // give the setup page time to show the new address
   } else if (!up && wasConnected) {
     wasConnected = false;
     lostSince = now;
@@ -91,6 +91,11 @@ void netLoop() {
   // Can't reach the saved network for 30 s: open the setup AP so it can be changed.
   // Auto-reconnect keeps trying in the background, and the AP closes again once we're back.
   if (!up && !apOn && now - lostSince > 30000) startAp();
+}
+
+void netStartSetupAp(uint32_t ms) {
+  startAp();
+  apOffAt = millis() + ms;
 }
 
 bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {

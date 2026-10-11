@@ -2,13 +2,28 @@
 
 #include <time.h>
 
-#include "config.h"
 #include "eventlog.h"
-#include "radar.h"
+#include "hwconfig.h"
+#include "sensors/sensor.h"
 #include "settings.h"
 
 static Presence p{false, 0, 0, 0};
 static int today = -1;
+static int ledPin = -1;
+static bool ledRgb = false;
+
+static void setLed(bool on) {
+  if (ledPin < 0) return;
+  if (ledRgb) neopixelWrite(ledPin, on ? 40 : 0, on ? 20 : 0, 0);  // amber while present
+  else digitalWrite(ledPin, on);
+}
+
+void presenceBegin() {
+  ledPin = hwPin(hw.as<JsonVariantConst>(), "led");
+  ledRgb = hw["ledType"] == "ws2812";
+  if (ledPin >= 0 && !ledRgb) pinMode(ledPin, OUTPUT);
+  setLed(false);
+}
 
 static void countVisit() {
   time_t now = time(nullptr);
@@ -24,21 +39,21 @@ static void countVisit() {
 }
 
 void presenceLoop() {
-  const RadarState& r = radar();
   uint32_t now = millis();
-  if (r.detected) p.lastSeenMs = now;
+  bool detected = sensorsPresence();
+  if (detected) p.lastSeenMs = now;
 
-  bool want = r.detected || (p.present && now - p.lastSeenMs < settings.holdSeconds * 1000UL);
+  bool want = detected || (p.present && now - p.lastSeenMs < settings.holdSeconds * 1000UL);
   if (want == p.present) return;
 
   uint32_t lasted = (now - p.sinceMs) / 1000;
   p.present = want;
   p.sinceMs = now;
-  digitalWrite(PIN_LED, want);
+  setLed(want);
 
   if (want) {
     countVisit();
-    logEvent("present", r.uart ? String(r.moving ? r.movingCm : r.stillCm) + " cm" : "");
+    logEvent("present", sensorsPresenceDetail());
   } else {
     logEvent("clear", "after " + String(lasted) + " s");
   }

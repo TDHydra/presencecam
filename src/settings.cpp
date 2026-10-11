@@ -19,9 +19,8 @@ void settingsLoad() {
   settings.name = prefs.getString("name", "PresenceCam-" + deviceId());
   settings.holdSeconds = prefs.getUShort("hold", DEFAULT_HOLD_S);
   settings.maxCm = prefs.getUShort("maxcm", DEFAULT_MAX_CM);
-  settings.oledSleepS = prefs.getUShort("oledsleep", DEFAULT_OLED_SLEEP_S);
-  settings.oledDriver = prefs.getUChar("oleddrv", 0);
-  settings.oledFlip = prefs.getBool("oledflip", false);
+  settings.screenSleepS = prefs.getUShort("oledsleep", DEFAULT_SCREEN_SLEEP_S);
+  settings.screenFlip = prefs.getBool("oledflip", false);
   settings.wifiSsid = prefs.getString("ssid", "");
   settings.wifiPass = prefs.getString("pass", "");
   prefs.end();
@@ -32,9 +31,8 @@ void settingsSave() {
   prefs.putString("name", settings.name);
   prefs.putUShort("hold", settings.holdSeconds);
   prefs.putUShort("maxcm", settings.maxCm);
-  prefs.putUShort("oledsleep", settings.oledSleepS);
-  prefs.putUChar("oleddrv", settings.oledDriver);
-  prefs.putBool("oledflip", settings.oledFlip);
+  prefs.putUShort("oledsleep", settings.screenSleepS);
+  prefs.putBool("oledflip", settings.screenFlip);
   prefs.putString("ssid", settings.wifiSsid);
   prefs.putString("pass", settings.wifiPass);
   prefs.end();
