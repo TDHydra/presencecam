@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PresenceCam Web Flasher</title>
+<meta name="description" content="Install the PresenceCam radar presence sensor firmware on an ESP32 NodeMCU from your browser.">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#5d6677;--line:#e2e5eb;--acc:#2563eb;--acc-fg:#fff;--warn:#b54708;--warn-bg:#fffaeb}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1117;--card:#171b23;--fg:#e6e9ef;--mut:#99a1b0;--line:#2a303c;--acc:#5b8dff;--acc-fg:#fff;--warn:#fdb022;--warn-bg:#2a2010}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:2rem;margin:8px 0 4px;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:0 0 10px;display:flex;gap:10px;align-items:center}
+h2 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--acc);color:var(--acc-fg);font-size:.95rem;flex:none}
+p{margin:8px 0}.mut{color:var(--mut)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
+ul{padding-left:20px;margin:8px 0}li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:.95rem}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--bg);padding:1px 5px;border-radius:4px}
+.wiring{width:100%;height:auto;border-radius:10px;border:1px solid var(--line);display:block;margin-top:10px}
+.flash{display:flex;flex-wrap:wrap;gap:16px;align-items:center;margin:14px 0 6px}
+esp-web-install-button button{background:var(--acc);color:var(--acc-fg);border:0;border-radius:10px;padding:14px 26px;font:inherit;font-weight:700;font-size:1.05rem;cursor:pointer}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;margin-top:10px}
+.tw{overflow-x:auto}
+details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+footer{text-align:center;font-size:.9rem;margin-top:28px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>PresenceCam</h1>
+  <p class="mut">A radar presence sensor with an OLED screen and a tamper-evident event log, for the ESP32 NodeMCU. Firmware version {{VERSION}}.</p>
+</header>
+
+<section>
+  <h2><span class="n">1</span>What you need</h2>
+  <div class="tw"><table>
+    <tr><th>Part</th><th>Notes</th></tr>
+    <tr><td>ESP32 NodeMCU (ESP-32S / ESP32-WROOM-32 devkit)</td><td>30 or 38 pin, CP2102 or CH340 USB chip. Not the ESP8266 NodeMCU.</td></tr>
+    <tr><td>Radar: HLK-LD2410B or LD2410C <em>(recommended)</em></td><td>Shows distance and also detects people sitting still. An RCWL-0516 also works, as on/off only.</td></tr>
+    <tr><td>OLED 128×64 I²C, 4 pins</td><td>0.96" SSD1306 or 1.3" SH1106. You pick which one on the device's web page.</td></tr>
+    <tr><td>Jumper wires + a USB <strong>data</strong> cable</td><td>The LD2410 has a 1.25 mm connector; it usually ships with a lead.</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>Wire it</h2>
+  <img class="wiring" src="wiring.svg" alt="Wiring: OLED GND to GND, VCC to 3V3, SCL to D22, SDA to D21. LD2410 VCC to VIN 5V, GND to GND, TX to D16, RX to D17, OUT to D27.">
+  <div class="tw"><table>
+    <tr><th>From</th><th>To ESP32 pin</th></tr>
+    <tr><td>OLED VCC · GND · SDA · SCL</td><td><code>3V3</code> · <code>GND</code> · <code>D21</code> · <code>D22</code></td></tr>
+    <tr><td>LD2410 VCC · GND</td><td><code>VIN</code> (5 V from USB) · <code>GND</code></td></tr>
+    <tr><td>LD2410 TX · RX · OUT</td><td><code>D16</code> (RX2) · <code>D17</code> (TX2) · <code>D27</code></td></tr>
+    <tr><td>RCWL-0516 VIN · GND · OUT</td><td><code>VIN</code> · <code>GND</code> · <code>D27</code></td></tr>
+  </table></div>
+  <p class="mut">The LD2410 needs 5 V on VCC; its signal pins are 3.3 V, so they connect straight to the ESP32.</p>
+</section>
+
+<section>
+  <h2><span class="n">3</span>Install the firmware</h2>
+  <p>Plug the board into this computer with USB, click the button and pick the port (it is usually called <em>CP210x</em>, <em>USB Serial</em> or <em>CH340</em>).</p>
+  <div class="flash">
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Connect &amp; install</button>
+      <span slot="unsupported"><span class="note" style="display:block">Your browser can't talk to USB devices. Open this page in <strong>Chrome</strong> or <strong>Edge</strong> on a computer (not on a phone or in Safari or Firefox).</span></span>
+      <span slot="not-allowed"><span class="note" style="display:block">This page has to be opened over https to use USB.</span></span>
+    </esp-web-install-button>
+  </div>
+  <p class="mut">On a new board, let it erase the device when asked. It takes about a minute.</p>
+</section>
+
+<section>
+  <h2><span class="n">4</span>Connect it to Wi-Fi</h2>
+  <p>Right after the install, the flasher asks for your Wi-Fi name and password and sends them over the USB cable. That's it: the OLED shows the address, for example <code>192.168.1.42</code>, and the board is also reachable at <code>http://presencecam-xxxx.local</code>.</p>
+  <p>Skipped that step? The board opens its own network called <strong>PresenceCam-XXXX</strong>. Join it with your phone; the setup page opens by itself (or go to <code>http://192.168.4.1</code>).</p>
+</section>
+
+<section>
+  <h2><span class="n">5</span>Use it</h2>
+  <ul>
+    <li><strong>OLED:</strong> shows <em>PRESENT</em> or <em>clear</em>, the distance and the radar signal strength. Press <strong>BOOT</strong> to cycle through the network and device pages.</li>
+    <li><strong>Web page:</strong> live status, the event log with a <em>Verified</em> badge, settings (hold time, max distance, OLED type), Wi-Fi and firmware updates.</li>
+    <li><strong>Blue LED</strong> on the board lights while someone is present.</li>
+    <li><strong>Hold BOOT for 5 seconds</strong> to forget Wi-Fi and get the setup network back.</li>
+    <li><strong>Logs &amp; console:</strong> click the button above again with the board plugged in and choose <em>Logs &amp; console</em>. Type <code>help</code> for commands.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Troubleshooting</h2>
+  <details><summary>No port shows up</summary>
+    <p>Use a data cable; many USB cables only charge. Install the USB driver for your board's chip: <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers">CP210x</a> or <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html">CH340</a>. On Linux, add yourself to the <code>dialout</code> group.</p></details>
+  <details><summary>"Failed to connect" or stuck at "Preparing"</summary>
+    <p>Hold the <strong>BOOT</strong> button, click <em>Connect &amp; install</em> again, and let go of BOOT once the progress bar moves. Close the Arduino IDE or any serial monitor that may have the port open.</p></details>
+  <details><summary>The OLED stays dark or shows garbage</summary>
+    <p>Check VCC to 3V3 and that SDA and SCL aren't swapped. Garbage, or a picture shifted by two pixels, usually means a 1.3" SH1106 screen: choose <em>SH1106</em> on the web page, or type <code>oled sh1106</code> in the console.</p></details>
+  <details><summary>The radar says "OUT pin only" with an LD2410</summary>
+    <p>TX and RX are crossed: LD2410 TX goes to D16, RX to D17. Swap them if needed. Presence still works from the OUT pin, without distance.</p></details>
+  <details><summary>Presence stays on, or turns on with nobody there</summary>
+    <p>Radar sees through thin walls and picks up fans and curtains. Lower the max distance on the web page, point the radar away from moving things, and adjust the hold time.</p></details>
+  <details><summary>Brownout resets</summary>
+    <p>The LD2410 draws current in bursts. Use a different USB port or a powered hub, or a short cable.</p></details>
+</section>
+
+<footer class="mut">Flashing uses <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>. Firmware files are on the <a href="firmware/presencecam-merged.bin">full image</a> and <a href="firmware/presencecam-ota.bin">update image</a> links.</footer>
+</main>
+</body>
+</html>
