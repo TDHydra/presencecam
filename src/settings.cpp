@@ -21,6 +21,8 @@ void settingsLoad() {
   settings.maxCm = prefs.getUShort("maxcm", DEFAULT_MAX_CM);
   settings.screenSleepS = prefs.getUShort("oledsleep", DEFAULT_SCREEN_SLEEP_S);
   settings.screenFlip = prefs.getBool("oledflip", false);
+  settings.wifiTxPower = prefs.getChar("txpwr", 0);
+  settings.lowPowerLatched = prefs.getBool("lowtx", false);
   settings.wifiSsid = prefs.getString("ssid", "");
   settings.wifiPass = prefs.getString("pass", "");
   prefs.end();
@@ -33,6 +35,8 @@ void settingsSave() {
   prefs.putUShort("maxcm", settings.maxCm);
   prefs.putUShort("oledsleep", settings.screenSleepS);
   prefs.putBool("oledflip", settings.screenFlip);
+  prefs.putChar("txpwr", settings.wifiTxPower);
+  prefs.putBool("lowtx", settings.lowPowerLatched);
   prefs.putString("ssid", settings.wifiSsid);
   prefs.putString("pass", settings.wifiPass);
   prefs.end();

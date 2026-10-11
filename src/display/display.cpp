@@ -9,6 +9,7 @@
 #include "hwconfig.h"
 #include "layouts/layout.h"
 #include "net.h"
+#include "power.h"
 #include "presence.h"
 #include "sensors/sensor.h"
 #include "settings.h"
@@ -149,6 +150,10 @@ static void pageNetwork(Gfx& g) {
     y = line(g, y, F_MEDIUM, netApName());
     y = line(g, y, F_SMALL, "then open", C_MUTED);
     line(g, y, F_SMALL, "http://192.168.4.1");
+  } else if (!powerWifiAllowed()) {
+    y = line(g, y, F_SMALL, "Wi-Fi off:", C_WARN);
+    y = line(g, y, F_SMALL, "USB power too weak", C_WARN);
+    line(g, y, F_SMALL, "better cable / 1000uF cap", C_MUTED);
   } else {
     y = line(g, y, F_SMALL, "Connecting to", C_MUTED);
     line(g, y, F_MEDIUM, settings.wifiSsid);

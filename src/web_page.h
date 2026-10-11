@@ -62,7 +62,8 @@ details summary{cursor:pointer;font-weight:600}
 <div class="row"><div><label for="hold">Hold time (seconds)</label><input id="hold" name="hold" type="number" min="1" max="3600"></div>
 <div><label for="maxcm">Max distance (cm, LD2410 only)</label><input id="maxcm" name="maxcm" type="number" min="30" max="800"></div></div>
 <div class="row"><div><label for="screenflip">Screen orientation</label><select id="screenflip" name="screenflip"><option value="0">Normal</option><option value="1">Upside down</option></select></div>
-<div><label for="screensleep">Screen off after nobody is present for (s, 0 = never)</label><input id="screensleep" name="screensleep" type="number" min="0"></div></div>
+<div><label for="txpower">Wi-Fi transmit power</label><select id="txpower" name="txpower"><option value="0">Auto: full, lowers itself after a brownout</option><option value="78">19.5 dBm (full)</option><option value="60">15 dBm</option><option value="44">11 dBm</option><option value="34">8.5 dBm (weak USB power)</option></select>
+<label for="screensleep">Screen off after nobody is present for (s, 0 = never)</label><input id="screensleep" name="screensleep" type="number" min="0"></div></div>
 <button>Save settings</button> <span id="smsg" class="mut"></span></form></section>
 
 <section class="card"><h2>Wi-Fi</h2><p class="mut" id="wstat"></p><form id="wf">
@@ -90,10 +91,10 @@ async function status(){
   const bar=r.max?`<div class="bar"><i style="width:${r.valid?Math.min(100,r.value/r.max*100):0}%"></i></div>`:'';
   return `<div class="kv"><span class="mut">${esc(r.label)}</span><b>${v}</b>${bar}</div>`}).join('')||'<p class="mut">No sensors set up yet.</p>';
  $('sens').textContent=S.sensors.map(x=>x.title+': '+x.status).join(' · ')+' · display: '+S.display;
- $('wstat').textContent=S.wifi.connected?'Connected to '+S.wifi.ssid+' ('+S.wifi.rssi+' dBm). Also reachable as http://'+S.wifi.host:(S.wifi.ssid?'Trying to join '+S.wifi.ssid+'…':'Not set up yet.');
+ $('wstat').textContent=(S.wifi.connected?'Connected to '+S.wifi.ssid+' ('+S.wifi.rssi+' dBm). Also reachable as http://'+S.wifi.host:(S.wifi.ssid?'Trying to join '+S.wifi.ssid+'…':'Not set up yet.'))+' · '+S.wifi.power+(S.wifi.brownouts?' · '+S.wifi.brownouts+' brownout reset(s) before this start':'');
  $('fw').textContent='Version '+S.fw+' · free memory '+Math.round(S.heap/1024)+' KB';
  if(!formFilled){formFilled=true;const st=S.settings;$('sname').value=S.name;$('hold').value=st.hold;$('maxcm').value=st.maxcm;
-  $('screenflip').value=st.screenflip?1:0;$('screensleep').value=st.screensleep;$('ssid').value=S.wifi.ssid}
+  $('screenflip').value=st.screenflip?1:0;$('screensleep').value=st.screensleep;$('txpower').value=S.wifi.txpower;$('ssid').value=S.wifi.ssid}
 }
 function when(t,up){return t>1700000000?new Date(t*1000).toLocaleString():'uptime '+dur(+up)}
 async function loadLog(){

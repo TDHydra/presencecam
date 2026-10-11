@@ -7,6 +7,7 @@
 #include "display.h"
 #include "eventlog.h"
 #include "net.h"
+#include "power.h"
 #include "presence.h"
 #include "hwconfig.h"
 #include "sensors/sensor.h"
@@ -31,6 +32,7 @@ static const char* HELP =
     "  hold S            seconds to stay present after the last detection\n"
     "  maxcm CM          ignore LD2410 targets further away than this\n"
     "  flip              turn the screen upside down\n"
+    "  txpower auto|19.5|15|11|8.5   Wi-Fi transmit power in dBm (auto lowers itself after a brownout)\n"
     "  reboot\n"
     "  factory YES       erase settings, Wi-Fi, hardware config and the log (new signing key)\n";
 
@@ -68,6 +70,8 @@ static void status() {
   else
     Serial.printf("  wifi      not connected%s%s\n", settings.wifiSsid.length() ? ", trying " : "",
                   settings.wifiSsid.c_str());
+  Serial.printf("  power     %s%s\n", powerSummary().c_str(),
+                powerBrownouts() ? (", " + String(powerBrownouts()) + " brownout reset(s) before this start").c_str() : "");
   if (netApActive()) Serial.printf("            setup AP \"%s\" at http://192.168.4.1\n", netApName().c_str());
   Serial.printf("  log       next line %lu\n", (unsigned long)logNextLine());
 }
@@ -150,6 +154,12 @@ static void run(String cmd) {
     settings.maxCm = constrain(arg.toInt(), 30, 800);
     settingsSave();
     Serial.printf("  max %ucm\n", settings.maxCm);
+  } else if (word == "txpower" && arg.length()) {
+    settings.wifiTxPower = arg == "auto" ? 0 : constrain((int)(arg.toFloat() * 4 + 0.5f), 8, 78);
+    if (!settings.wifiTxPower) settings.lowPowerLatched = false;
+    settingsSave();
+    netApplyTxPower();
+    Serial.println("  " + powerSummary());
   } else if (word == "flip") {
     settings.screenFlip = !settings.screenFlip;
     settingsSave();

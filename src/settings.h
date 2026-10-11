@@ -9,6 +9,8 @@ struct Settings {
   uint16_t maxCm;
   uint16_t screenSleepS;  // turn the screen off after this long with nobody present (0 = never)
   bool screenFlip;        // rotate the screen 180 degrees
+  int8_t wifiTxPower;     // 0 = auto, else 0.25 dBm units (78 = 19.5 dBm ... 34 = 8.5 dBm)
+  bool lowPowerLatched;   // auto mode found low power necessary (see power.h)
   String wifiSsid;
   String wifiPass;
 };

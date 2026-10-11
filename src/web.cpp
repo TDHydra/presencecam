@@ -9,6 +9,7 @@
 #include "display.h"
 #include "eventlog.h"
 #include "net.h"
+#include "power.h"
 #include "presence.h"
 #include "hwconfig.h"
 #include "sensors/sensor.h"
@@ -76,6 +77,9 @@ static void sendStatus() {
   w["rssi"] = netConnected() ? WiFi.RSSI() : 0;
   w["ap"] = netApActive();
   w["host"] = netHostname() + ".local";
+  w["power"] = powerSummary();
+  w["txpower"] = settings.wifiTxPower;
+  w["brownouts"] = powerBrownouts();
 
   j["time"] = (uint32_t)time(nullptr);
   j["uptime"] = now / 1000;
@@ -138,6 +142,11 @@ static void postSettings() {
   if (server.hasArg("hold")) settings.holdSeconds = constrain(server.arg("hold").toInt(), 1, 3600);
   if (server.hasArg("maxcm")) settings.maxCm = constrain(server.arg("maxcm").toInt(), 30, 800);
   if (server.hasArg("screensleep")) settings.screenSleepS = constrain(server.arg("screensleep").toInt(), 0, 86400);
+  if (server.hasArg("txpower")) {
+    settings.wifiTxPower = constrain(server.arg("txpower").toInt(), 0, 78);
+    if (!settings.wifiTxPower) settings.lowPowerLatched = false;  // "auto" starts over at full power
+    netApplyTxPower();
+  }
   if (server.hasArg("screenflip")) {
     settings.screenFlip = server.arg("screenflip") == "1" || server.arg("screenflip") == "true";
     displayApplyFlip();

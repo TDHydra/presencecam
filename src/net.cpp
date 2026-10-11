@@ -7,6 +7,7 @@
 #include "config.h"
 #include "display.h"
 #include "eventlog.h"
+#include "power.h"
 #include "settings.h"
 
 static DNSServer dns;
@@ -14,6 +15,11 @@ static bool apOn = false;
 static bool wasConnected = false;
 static uint32_t lostSince = 0;
 static uint32_t apOffAt = 0;  // close the setup AP a while after we got online
+static bool radioOff = false;  // Wi-Fi disabled for this boot because power is too weak
+
+static void applyTxPower() {
+  WiFi.setTxPower((wifi_power_t)powerTxQuarterDbm());
+}
 
 String netApName() { return "PresenceCam-" + deviceId(); }
 
@@ -35,6 +41,7 @@ static void startAp() {
   if (apOn) return;
   WiFi.mode(WIFI_AP_STA);
   WiFi.softAP(netApName().c_str());
+  applyTxPower();
   dns.start(53, "*", WiFi.softAPIP());  // every name resolves to us -> captive portal
   apOn = true;
   Serial.printf("wifi: setup access point \"%s\" at http://192.168.4.1\n", netApName().c_str());
@@ -52,13 +59,29 @@ static void stopAp() {
 
 void netBegin() {
   WiFi.persistent(false);  // we keep credentials in our own NVS namespace
+  if (!powerWifiAllowed()) {
+    radioOff = true;
+    WiFi.mode(WIFI_OFF);
+    Serial.println("wifi: OFF for this boot, the USB power browned out twice when Wi-Fi started.");
+    Serial.println("      Use a better cable or charger, or add a 470-1000 uF capacitor across 3V3 and GND,");
+    Serial.println("      then power-cycle or press RST.");
+    displayMessage("Power too weak", "Wi-Fi off. See README", 20000);
+    return;
+  }
+  if (powerTxQuarterDbm() < 78) {
+    // Low-power start: lower CPU clock and give the supply a moment before the radio spike
+    setCpuFrequencyMhz(80);
+    delay(500);
+  }
   WiFi.setHostname(netHostname().c_str());
   WiFi.mode(WIFI_STA);
+  applyTxPower();
   WiFi.setAutoReconnect(true);
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   if (settings.wifiSsid.length()) {
-    Serial.printf("wifi: joining \"%s\"\n", settings.wifiSsid.c_str());
+    Serial.printf("wifi: joining \"%s\" at %.1f dBm\n", settings.wifiSsid.c_str(), powerTxQuarterDbm() / 4.0f);
     WiFi.begin(settings.wifiSsid.c_str(), settings.wifiPass.c_str());
+    applyTxPower();
     lostSince = millis();
   } else {
     startAp();
@@ -66,6 +89,7 @@ void netBegin() {
 }
 
 void netLoop() {
+  if (radioOff) return;
   if (apOn) dns.processNextRequest();
   uint32_t now = millis();
   bool up = netConnected();
@@ -93,7 +117,12 @@ void netLoop() {
   if (!up && !apOn && now - lostSince > 30000) startAp();
 }
 
+void netApplyTxPower() {
+  if (!radioOff) applyTxPower();
+}
+
 void netStartSetupAp(uint32_t ms) {
+  if (radioOff) return;
   startAp();
   apOffAt = millis() + ms;
 }
@@ -105,6 +134,7 @@ bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {
   Serial.printf("wifi: joining \"%s\"\n", ssid.c_str());
   WiFi.disconnect();
   WiFi.begin(ssid.c_str(), pass.c_str());
+  applyTxPower();
   lostSince = millis();
   uint32_t start = millis();
   while (millis() - start < timeoutMs) {

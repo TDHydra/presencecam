@@ -144,8 +144,12 @@ a{color:var(--acc)}
     <p>Check VCC to 3V3, GND, and that SDA and SCL aren't swapped. The board's web page and serial console (<code>status</code>) say whether the display was found.</p></details>
   <details><summary>The LD2410 shows no distance</summary>
     <p>TX and RX are crossed: the radar's TX goes to the ESP32's RX pin in the table above. Presence still works from OUT, without distance.</p></details>
-  <details><summary>Brownout resets</summary>
-    <p>The LD2410 draws current in bursts. Try another USB port, a powered hub or a shorter cable.</p></details>
+  <details><summary>Brownout resets / the board keeps restarting</summary>
+    <p>The Wi-Fi radio draws short spikes of 300–500 mA when it starts, and many NodeMCU boards can't hold 3.3 V through them on a weak USB supply. The firmware reacts by itself: after one brownout it restarts Wi-Fi at low power (8.5 dBm), and after two it leaves Wi-Fi off for that start and says so on the screen. The screen, sensors and console keep working. To fix the cause:</p>
+    <ul><li>Use a short, thick USB cable straight into the computer or a 5 V / 1 A+ charger, not a hub.</li>
+    <li>Solder or plug a <strong>470–1000 µF electrolytic capacitor across 3V3 and GND</strong> (stripe to GND). This fixes most boards.</li>
+    <li>The same weak power can make installs fail with "bad data checksum" (status 193). Fix the power, then install again.</li></ul>
+    <p>You can also pick the Wi-Fi power on the device's web page or with <code>txpower 8.5</code> in the console.</p></details>
 </section>
 
 <footer class="mut">Flashing uses <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>. Firmware files: <a href="firmware/presencecam-esp32.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3.bin">ESP32-S3</a> (full images, offset 0), and OTA updates for the device's web page: <a href="firmware/presencecam-esp32-ota.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-ota.bin">ESP32-S3</a>.</footer>

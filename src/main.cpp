@@ -12,6 +12,7 @@
 #include "eventlog.h"
 #include "hwconfig.h"
 #include "net.h"
+#include "power.h"
 #include "presence.h"
 #include "sensors/sensor.h"
 #include "settings.h"
@@ -34,6 +35,7 @@ static const char* resetReason() {
 void setup() {
   Serial.setRxBufferSize(2048);  // room for a whole "config set {...}" line
   Serial.begin(115200);
+  powerBegin();
   int taps = buttonsCountResetTaps();
 
   settingsLoad();
@@ -48,7 +50,6 @@ void setup() {
   presenceBegin();
   buttonsBegin();
   logBegin();
-  logEvent("boot", String("fw ") + FW_VERSION + ", " + resetReason() + (hwSafeMode ? ", safe mode" : ""));
   netBegin();
   if (taps == 2) {
     Serial.println("rst: double tap, opening the setup network for 10 minutes");
@@ -58,7 +59,22 @@ void setup() {
   printBanner(resetReason());
 }
 
+// The "boot" log line is written once the board has run for 10 s. A board stuck in a reset
+// loop (e.g. brownouts) then doesn't write to flash on every restart.
+static void logBootOnce() {
+  static bool done = false;
+  if (done || millis() < 10000) return;
+  done = true;
+  String d = String("fw ") + FW_VERSION + ", " + resetReason();
+  if (powerBrownouts()) d += " x" + String(powerBrownouts());
+  if (!powerWifiAllowed()) d += ", Wi-Fi off (weak power)";
+  if (hwSafeMode) d += ", safe mode";
+  logEvent("boot", d);
+}
+
 void loop() {
+  logBootOnce();
+  powerLoop();
   while (Serial.available()) improvFeed(Serial.read(), consoleByte);
   sensorsLoop();
   presenceLoop();

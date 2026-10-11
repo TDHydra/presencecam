@@ -68,6 +68,17 @@ actions can be changed in the hardware config:
 `"buttons":{"short":"next","double":"dim","hold3":"info","hold10":"forget_wifi"}`. The possible
 actions are `none next dim info forget_wifi setup_ap reboot`.
 
+## Power
+
+The Wi-Fi radio pulls 300–500 mA spikes when it starts. On a weak USB supply, many NodeMCU boards
+brown out and reset. The firmware handles this itself
+([power.h](src/power.h)). After one brownout reset, Wi-Fi restarts at 8.5 dBm. After a second,
+Wi-Fi stays off for that start with a message on screen, while the screen, sensors and console keep
+working. If low power turns out stable, auto mode keeps using it. The `boot` log line is only
+written after 10 s of uptime, so a reset loop doesn't wear the flash. The real fixes are a better
+cable or charger, or a 470–1000 µF capacitor across 3V3 and GND. Wi-Fi power can also be set by
+hand (web page, or `txpower auto|19.5|15|11|8.5` in the console).
+
 ## Using it
 
 - **Screen**: the layout's pages, then *Network* (IP, signal) and *Device* (version, board, uptime).

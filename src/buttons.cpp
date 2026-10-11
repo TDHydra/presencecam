@@ -22,10 +22,11 @@ int buttonsCountResetTaps() {
   esp_reset_reason_t why = esp_reset_reason();
   Preferences p;
   p.begin("pcamtap", false);
-  int taps = p.getUChar("n", 0);
+  int stored = p.getUChar("n", 0);
   // Only a reset from the RST/EN pin or power counts as a tap (a crash or "reboot" doesn't).
-  taps = (why == ESP_RST_POWERON || why == ESP_RST_EXT) ? taps + 1 : 1;
-  p.putUChar("n", min(taps, 9));
+  int taps = (why == ESP_RST_POWERON || why == ESP_RST_EXT) ? stored + 1 : 1;
+  // Skip the write when nothing changes, so a reset loop doesn't wear the flash
+  if (min(taps, 9) != stored) p.putUChar("n", min(taps, 9));
   p.end();
   return taps;
 }

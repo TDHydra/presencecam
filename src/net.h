@@ -8,6 +8,7 @@ void netBegin();
 void netLoop();
 bool netConnected();
 bool netApActive();
+void netApplyTxPower();  // after the Wi-Fi power setting changed
 String netApName();
 String netHostname();
 String netUrl();  // http://<ip>/ when connected, "" otherwise
