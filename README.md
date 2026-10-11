@@ -7,7 +7,7 @@ You pick your **board**, **display**, **sensors** and **screen layout** in the w
 works out which pin each wire goes to, draws the wiring diagram, installs the firmware and
 sends your setup to the board. Nothing to compile, no pins to edit.
 
-**Web flasher: <https://OWNER.github.io/presencecam/>** (Chrome or Edge on a computer)
+**Web flasher: <https://tdhydra.github.io/presencecam/>** (Chrome or Edge on a computer)
 
 ![Example wiring the flasher draws: ESP32 DevKit with a 0.96" OLED, LD2410 radar and VL53L0X](docs/wiring-example.svg)
 
