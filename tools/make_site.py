@@ -2,8 +2,8 @@
 
     python tools/make_site.py [pio_build_dir] [out_dir]
 
-Defaults: .pio/build -> _site. Needs every firmware build; the ESP32-P4 ones are looked for in
-.pio/build-p4 next to it (see tools/serve.sh).
+Defaults: .pio/build -> _site. Needs every firmware build (tools/build.sh); the Arduino core 2
+ones are looked for in .pio/build-core2 next to it.
 Serve the result over https or localhost, because Web Serial only works in a secure context:
     python -m http.server -d _site
 """
@@ -21,14 +21,20 @@ version = (root / "VERSION").read_text().strip()
 CHIPS = {
     "esp32": ("ESP32", "presencecam-esp32"),
     "esp32s3": ("ESP32-S3", "presencecam-esp32s3"),
+    "esp32c3": ("ESP32-C3", "presencecam-esp32c3"),
+    "esp32c6": ("ESP32-C6", "presencecam-esp32c6"),
     "esp32p4": ("ESP32-P4", "presencecam-esp32p4"),
     "esp32p4r3": ("ESP32-P4", "presencecam-esp32p4r3"),
+    "esp32-core2": ("ESP32", "presencecam-esp32-core2"),
+    "esp32s3-core2": ("ESP32-S3", "presencecam-esp32s3-core2"),
+    "esp32c3-core2": ("ESP32-C3", "presencecam-esp32c3-core2"),
 }
-# ESP Web Tools picks a build by chip family only, so the two ESP32-P4 revisions get a manifest
-# each; the configurator switches between them.
+# ESP Web Tools picks a build by chip family only, so the two ESP32-P4 revisions and the Arduino
+# core 2 builds get a manifest each; the configurator switches between them.
 MANIFESTS = {
-    "manifest.json": ["esp32", "esp32s3", "esp32p4"],
-    "manifest-p4r3.json": ["esp32", "esp32s3", "esp32p4r3"],
+    "manifest.json": ["esp32", "esp32s3", "esp32c3", "esp32c6", "esp32p4"],
+    "manifest-p4r3.json": ["esp32", "esp32s3", "esp32c3", "esp32c6", "esp32p4r3"],
+    "manifest-core2.json": ["esp32-core2", "esp32s3-core2", "esp32c3-core2", "esp32c6", "esp32p4"],
 }
 
 if out.exists():
@@ -38,18 +44,24 @@ shutil.copytree(root / "site", out, ignore=shutil.ignore_patterns("test"))
 
 # One catalog file for the configurator
 catalog = {}
-for kind in ("boards", "sensors", "displays", "layouts"):
+for kind in ("boards", "sensors", "displays", "layouts", "cameras"):
     catalog[kind] = [json.loads(p.read_text()) for p in sorted((root / "catalog" / kind).glob("*.json"))]
 (out / "catalog.json").write_text(json.dumps(catalog, ensure_ascii=False))
 
 fw = out / "firmware"
 fw.mkdir()
+built = set()
 for env, (family, stem) in CHIPS.items():
     build = builds / env
-    if not build.exists():
-        build = builds.with_name("build-p4") / env
+    if not (build / "presencecam-merged.bin").exists():
+        build = builds.with_name("build-core2") / env
+    if not (build / "presencecam-merged.bin").exists():
+        # fine for a local test of one chip (pio run -e esp32); a release has them all
+        print(f"warning: no {env} build, the site won't offer it")
+        continue
     shutil.copy(build / "presencecam-merged.bin", fw / f"{stem}.bin")
     shutil.copy(build / "firmware.bin", fw / f"{stem}-ota.bin")
+    built.add(env)
 
 for name, envs in MANIFESTS.items():
     manifest = {
@@ -60,6 +72,7 @@ for name, envs in MANIFESTS.items():
         "builds": [
             {"chipFamily": CHIPS[env][0], "parts": [{"path": f"firmware/{CHIPS[env][1]}.bin", "offset": 0}]}
             for env in envs
+            if env in built
         ],
     }
     (out / name).write_text(json.dumps(manifest, indent=2) + "\n")

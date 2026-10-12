@@ -1,0 +1,20 @@
+{
+  "id": "vl53l1x",
+  "name": "VL53L1X laser distance (ToF, long range)",
+  "short": "VL53L1X distance",
+  "bus": "i2c",
+  "address": "0x29",
+  "supply": "3v3",
+  "presence": false,
+  "description": "Like the VL53L0X but reaches about 4 m. Shares the I²C wires with the OLED. It has the same I²C address as the VL53L0X, so fit one or the other. Peel off the protective film.",
+  "pins": [
+    {"label": "VIN", "role": "vcc"},
+    {"label": "GND", "role": "gnd"},
+    {"label": "SCL", "role": "scl"},
+    {"label": "SDA", "role": "sda"}
+  ],
+  "options": [
+    {"key": "presenceMm", "label": "Also count as presence when something is closer than (mm, 0 = off)", "type": "number", "default": 0, "min": 0, "max": 4000}
+  ],
+  "readings": [{"key": "ToF", "label": "ToF distance mm"}]
+}

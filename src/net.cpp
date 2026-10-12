@@ -1,10 +1,20 @@
 #include "net.h"
+#include "debuglog.h"
 
 #include <ESPmDNS.h>
+#if HAS_ETH
+#include <ETH.h>
+#include <SPI.h>
+#endif
+#if HAS_WIFI
+#include <DNSServer.h>
+#include <WiFi.h>
+#endif
 
 #include "config.h"
 #include "display.h"
 #include "eventlog.h"
+#include "hwconfig.h"
 #include "power.h"
 #include "settings.h"
 
@@ -31,41 +41,59 @@ static void announce(const char* tag, const char* name) {
   logEvent(tag, netIp());
 }
 
-#if NET_WIRED
-// ---------------------------------------------------------------------------------------
-// Ethernet (ESP32-P4's internal EMAC + IP101 PHY, pins as on the Waveshare ESP32-P4-ETH)
+static bool wired = false;  // the hardware config has an "eth" block: Ethernet instead of Wi-Fi
 
-#include <ETH.h>
-
-static bool wasConnected = false;
-
-bool netConnected() { return ETH.connected() && ETH.hasIP(); }
-bool netApActive() { return false; }
-String netIp() { return netConnected() ? ETH.localIP().toString() : ""; }
-String netLink() { return "Ethernet " + String(ETH.linkSpeed()) + "M" + (ETH.fullDuplex() ? "" : " half duplex"); }
-int netRssi() { return 0; }
-void netForget() {}
-int netScan(void (*)(const String&, int, bool, void*), void*) { return 0; }
-void netApplyTxPower() {}
-void netStartSetupAp(uint32_t) { Serial.println("eth: this board has no Wi-Fi; plug in a network cable"); }
-
-bool netJoin(const String&, const String&, uint32_t) {
-  Serial.println("eth: this board has no Wi-Fi; plug in a network cable");
-  return false;
+String netAddressing() {
+  if (!settings.staticIp) return "DHCP";
+  return "static " + settings.ip + " mask " + settings.mask + " via " + settings.gateway + (settings.dns.length() ? ", DNS " + settings.dns : "");
 }
 
-void netBegin() {
+// Parses the static addresses from settings. "" when fine (or when DHCP is used).
+static String parseAddresses(IPAddress& ip, IPAddress& mask, IPAddress& gw, IPAddress& dns) {
+  if (!settings.staticIp) return "";
+  if (!ip.fromString(settings.ip)) return "IP address \"" + settings.ip + "\" is not valid";
+  if (!mask.fromString(settings.mask)) return "subnet mask \"" + settings.mask + "\" is not valid";
+  if (!gw.fromString(settings.gateway)) return "gateway \"" + settings.gateway + "\" is not valid";
+  if (settings.dns.length() && !dns.fromString(settings.dns)) return "DNS \"" + settings.dns + "\" is not valid";
+  if (!settings.dns.length()) dns = gw;
+  return "";
+}
+static bool wasConnected = false;
+
+bool netWired() { return wired; }
+
+// ---------------------------------------------------------------------------------------
+// Ethernet: the chip's own MAC with an RMII PHY (ESP32-P4: IP101), or a W5500 on SPI
+
+#if HAS_ETH
+static bool ethUp() { return ETH.connected() && ETH.hasIP(); }
+
+static void ethBegin() {
+  JsonVariantConst e = hw["eth"];
+  String type = e["type"] | "";
   ETH.setHostname(netHostname().c_str());
-  if (!ETH.begin(ETH_PHY_IP101, 1, 31, 52, 51, EMAC_CLK_EXT_IN)) {
-    Serial.println("eth: Ethernet did not start");
+  netApplyAddressing();
+  bool ok = false;
+  if (type == "w5500") {
+    SPI.begin(hwPin(e, "sclk"), hwPin(e, "miso"), hwPin(e, "mosi"));
+    ok = ETH.begin(ETH_PHY_W5500, 1, hwPin(e, "cs"), hwPin(e, "int"), hwPin(e, "rst"), SPI, e["spiMhz"] | 20);
+  }
+#if CONFIG_IDF_TARGET_ESP32P4
+  else if (type == "ip101") {
+    ok = ETH.begin(ETH_PHY_IP101, e["phyAddr"] | 1, hwPin(e, "mdc"), hwPin(e, "mdio"), hwPin(e, "power"), EMAC_CLK_EXT_IN);
+  }
+#endif
+  if (!ok) {
+    Serial.printf("eth: %s Ethernet did not start\n", type.c_str());
+    displayMessage("Ethernet failed", type, 10000);
     return;
   }
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   Serial.println("eth: waiting for a cable and DHCP");
 }
 
-void netLoop() {
-  bool up = netConnected();
+static void ethLoop() {
+  bool up = ethUp();
   if (up && !wasConnected) {
     wasConnected = true;
     announce("eth", "Ethernet");
@@ -75,16 +103,23 @@ void netLoop() {
   }
 }
 
+static String ethLink() { return "Ethernet " + String(ETH.linkSpeed()) + "M" + (ETH.fullDuplex() ? "" : " half duplex"); }
+static String ethIp() { return ETH.localIP().toString(); }
 #else
-// ---------------------------------------------------------------------------------------
-// Wi-Fi
+// hwconfig refuses an "eth" block in these builds, so none of this runs
+static bool ethUp() { return false; }
+static void ethBegin() {}
+static void ethLoop() {}
+static String ethLink() { return ""; }
+static String ethIp() { return ""; }
+#endif
 
-#include <DNSServer.h>
-#include <WiFi.h>
+#if HAS_WIFI
+// ---------------------------------------------------------------------------------------
+// Wi-Fi: the saved network, or a setup access point with a captive portal
 
 static DNSServer dns;
 static bool apOn = false;
-static bool wasConnected = false;
 static uint32_t lostSince = 0;
 static uint32_t apOffAt = 0;  // close the setup AP a while after we got online
 static bool radioOff = false;  // Wi-Fi disabled for this boot because power is too weak
@@ -93,20 +128,7 @@ static void applyTxPower() {
   WiFi.setTxPower((wifi_power_t)powerTxQuarterDbm());
 }
 
-bool netConnected() { return WiFi.status() == WL_CONNECTED; }
-bool netApActive() { return apOn; }
-String netIp() { return netConnected() ? WiFi.localIP().toString() : ""; }
-String netLink() { return WiFi.SSID(); }
-int netRssi() { return netConnected() ? WiFi.RSSI() : 0; }
-void netForget() { WiFi.disconnect(true); }
-
-int netScan(void (*cb)(const String& ssid, int rssi, bool open, void* ctx), void* ctx) {
-  if (radioOff) return 0;
-  int n = WiFi.scanNetworks();
-  for (int i = 0; i < n; i++) cb(WiFi.SSID(i), WiFi.RSSI(i), WiFi.encryptionType(i) == WIFI_AUTH_OPEN, ctx);
-  WiFi.scanDelete();
-  return max(n, 0);
-}
+static bool wifiUp() { return WiFi.status() == WL_CONNECTED; }
 
 static void startAp() {
   if (apOn) return;
@@ -128,7 +150,17 @@ static void stopAp() {
   Serial.println("wifi: setup access point closed");
 }
 
-void netBegin() {
+static void wifiBegin() {
+#if !SOC_WIFI_SUPPORTED
+  // No radio on the chip: Wi-Fi goes through a co-processor, which needs its SDIO pins
+  JsonVariantConst h = hw["wifiHosted"];
+  if (h.isNull()) {
+    radioOff = true;
+    Serial.println("net: no Ethernet or Wi-Fi co-processor in the hardware config");
+    return;
+  }
+  WiFi.setPins(hwPin(h, "clk"), hwPin(h, "cmd"), hwPin(h, "d0"), hwPin(h, "d1"), hwPin(h, "d2"), hwPin(h, "d3"), hwPin(h, "rst"));
+#endif
   WiFi.persistent(false);  // we keep credentials in our own NVS namespace
   if (!powerWifiAllowed()) {
     radioOff = true;
@@ -146,6 +178,7 @@ void netBegin() {
   }
   WiFi.setHostname(netHostname().c_str());
   WiFi.mode(WIFI_STA);
+  netApplyAddressing();
   applyTxPower();
   WiFi.setAutoReconnect(true);
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
@@ -159,11 +192,11 @@ void netBegin() {
   }
 }
 
-void netLoop() {
+static void wifiLoop() {
   if (radioOff) return;
   if (apOn) dns.processNextRequest();
   uint32_t now = millis();
-  bool up = netConnected();
+  bool up = wifiUp();
 
   if (up && !wasConnected) {
     wasConnected = true;
@@ -184,17 +217,42 @@ void netLoop() {
   if (!up && !apOn && now - lostSince > 30000) startAp();
 }
 
+bool netConnected() { return wired ? ethUp() : wifiUp(); }
+bool netApActive() { return apOn; }
+String netIp() {
+  if (!netConnected()) return "";
+  return wired ? ethIp() : WiFi.localIP().toString();
+}
+String netLink() { return wired ? ethLink() : WiFi.SSID(); }
+int netRssi() { return !wired && wifiUp() ? WiFi.RSSI() : 0; }
+void netForget() {
+  if (!wired) WiFi.disconnect(true);
+}
+
+int netScan(void (*cb)(const String& ssid, int rssi, bool open, void* ctx), void* ctx) {
+  if (wired || radioOff) return 0;
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) cb(WiFi.SSID(i), WiFi.RSSI(i), WiFi.encryptionType(i) == WIFI_AUTH_OPEN, ctx);
+  WiFi.scanDelete();
+  return max(n, 0);
+}
+
 void netApplyTxPower() {
-  if (!radioOff) applyTxPower();
+  if (!wired && !radioOff) applyTxPower();
 }
 
 void netStartSetupAp(uint32_t ms) {
+  if (wired) { Serial.println("eth: this board is set up for Ethernet; plug in a network cable"); return; }
   if (radioOff) return;
   startAp();
   apOffAt = millis() + ms;
 }
 
 bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {
+  if (wired) {
+    Serial.println("eth: this board is set up for Ethernet; plug in a network cable");
+    return false;
+  }
   if (radioOff) {
     Serial.println("wifi: off because of weak power; fix the power, then press RST");
     return false;
@@ -209,13 +267,66 @@ bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {
   lostSince = millis();
   uint32_t start = millis();
   while (millis() - start < timeoutMs) {
-    if (netConnected()) return true;
+    if (wifiUp()) return true;
     delay(100);
   }
-  return netConnected();
+  return wifiUp();
+}
+
+#else
+// No Wi-Fi at all: Ethernet or nothing
+
+bool netConnected() { return wired && ethUp(); }
+bool netApActive() { return false; }
+String netIp() { return netConnected() ? ethIp() : ""; }
+String netLink() { return wired ? ethLink() : "no network"; }
+int netRssi() { return 0; }
+void netForget() {}
+int netScan(void (*)(const String&, int, bool, void*), void*) { return 0; }
+void netApplyTxPower() {}
+void netStartSetupAp(uint32_t) { Serial.println("net: this board has no Wi-Fi; plug in a network cable"); }
+bool netJoin(const String&, const String&, uint32_t) {
+  Serial.println("net: this board has no Wi-Fi; plug in a network cable");
+  return false;
 }
 
 #endif
+
+String netApplyAddressing() {
+  IPAddress ip, mask, gw, dns;
+  String err = parseAddresses(ip, mask, gw, dns);
+  if (err.length()) {
+    Serial.println("net: " + err + ", using DHCP instead");
+    ip = mask = gw = dns = IPAddress((uint32_t)0);
+  }
+  bool ok = true;
+  if (wired) {
+#if HAS_ETH
+    ok = ETH.config(ip, gw, mask, dns);
+#endif
+  }
+#if HAS_WIFI
+  else ok = WiFi.config(ip, gw, mask, dns);
+#endif
+  if (!ok) return "the interface refused the addresses";
+  if (!err.length() && settings.staticIp) Serial.println("net: " + netAddressing());
+  return err;
+}
+
+void netBegin() {
+  wired = !hw["eth"].isNull();
+  if (wired) ethBegin();
+#if HAS_WIFI
+  else wifiBegin();
+#endif
+}
+
+void netLoop() {
+  if (wired) ethLoop();
+#if HAS_WIFI
+  else wifiLoop();
+#endif
+}
 
 // ---------------------------------------------------------------------------------------
 // Improv Serial (https://www.improv-wifi.com/serial/), used by ESP Web Tools.
@@ -260,7 +371,7 @@ static void improvResult(uint8_t cmd, std::initializer_list<String> strs) {
 }
 
 static void improvRpc(const uint8_t* d, uint8_t len) {
-  if (NET_WIRED) return;  // nothing to provision; staying quiet makes the installer skip its Wi-Fi step
+  if (wired) return;  // nothing to provision; staying quiet makes the installer skip its Wi-Fi step
   if (len < 2) { improvError(ERR_INVALID); return; }
   uint8_t cmd = d[0];
   switch (cmd) {

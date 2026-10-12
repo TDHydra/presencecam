@@ -7,12 +7,13 @@ const PART_W = 150;
 const LANE = 9;         // gap between parallel wires
 const COLORS = {
   "3v3": "#d92d20", "5v": "#f79009", gnd: "#344054",
-  sda: "#2563eb", scl: "#2563eb", uart_rx: "#7a5af8", uart_tx: "#7a5af8", digital_in: "#12a150",
+  sda: "#2563eb", scl: "#2563eb", uart_rx: "#7a5af8", uart_tx: "#7a5af8", digital_in: "#12a150", digital_out: "#12a150",
+  spi_sck: "#0e7490", spi_mosi: "#0e7490", spi_miso: "#0e7490", spi_cs: "#0e7490",
 };
-const DASHED = new Set(["scl", "uart_tx"]);
+const DASHED = new Set(["scl", "uart_tx", "spi_miso", "digital_out"]);
 const LEGEND = [
   ["3v3", "3.3 V"], ["5v", "5 V"], ["gnd", "GND"], ["sda", "I²C (SDA solid, SCL dashed)"],
-  ["uart_rx", "UART, crossed (TX→RX, RX→TX)"], ["digital_in", "signal"],
+  ["uart_rx", "UART, crossed (TX→RX, RX→TX)"], ["digital_in", "signal (dashed: from the board)"], ["spi_sck", "SPI"],
 ];
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -21,7 +22,10 @@ function wireColor(pin) {
   return COLORS[pin.to.power || pin.role] || "#12a150";
 }
 
-export function renderWiring(board, parts, { title = "Wiring" } = {}) {
+// `highlight` is a part id: its wires are drawn at full strength and everything else fades,
+// so the part just added stands out.
+export function renderWiring(board, parts, { title = "Wiring", highlight = null } = {}) {
+  const faded = (partId) => highlight && partId !== highlight;
   const left = board.headers.left || [];
   const right = board.headers.right || [];
   const rows = Math.max(left.length, right.length);
@@ -153,13 +157,17 @@ export function renderWiring(board, parts, { title = "Wiring" } = {}) {
       d = `M${sx} ${sy} H${laneX(side, lane[side]++)} V${overY} H${laneX(w.t.side, lane[w.t.side]++)} V${ty} H${tx}`;
     }
     const dash = DASHED.has(w.pin.role) ? ' stroke-dasharray="7 4"' : "";
-    out.push(`<path d="${d}" fill="none" stroke="${wireColor(w.pin)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"${dash}/>`);
+    const fade = faded(w.p.part.id) ? ' opacity="0.22"' : (highlight ? ' stroke-width="4"' : "");
+    out.push(`<path d="${d}" fill="none" stroke="${wireColor(w.pin)}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"${dash}${fade}/>`);
   }
 
   // Parts
   for (const p of placed) {
     const { part } = p;
-    out.push(`<rect x="${p.x}" y="${p.y}" width="${PART_W}" height="${partH(part)}" rx="8" fill="#14532d"/>`);
+    const hot = highlight && part.id === highlight;
+    if (faded(part.id)) out.push(`<g opacity="0.35">`);
+    out.push(`<rect x="${p.x}" y="${p.y}" width="${PART_W}" height="${partH(part)}" rx="8" fill="#14532d"${hot ? ' stroke="#fcd34d" stroke-width="3"' : ""}/>`);
+    if (hot) out.push(`<text x="${p.x + PART_W / 2}" y="${p.y - 6}" text-anchor="middle" fill="#b45309" font-size="11" font-weight="700">just added: wire this</text>`);
     out.push(`<text x="${p.x + PART_W / 2}" y="${p.y + 18}" text-anchor="middle" fill="#fff" font-weight="600" font-size="11">${esc(part.name.length > 22 ? part.name.slice(0, 21) + "…" : part.name)}</text>`);
     part.pins.forEach((pin, i) => {
       const y = p.y + 30 + i * PITCH;
@@ -168,6 +176,7 @@ export function renderWiring(board, parts, { title = "Wiring" } = {}) {
       out.push(`<text x="${tx}" y="${y + 4}" text-anchor="${p.side === "left" ? "end" : "start"}" fill="#fff" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">${esc(pin.label)}</text>`);
       out.push(`<circle cx="${x}" cy="${y}" r="4" fill="#fcd34d"/>`);
     });
+    if (faded(part.id)) out.push(`</g>`);
   }
 
   // Legend

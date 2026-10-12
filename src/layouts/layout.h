@@ -12,6 +12,10 @@ struct Layout {
 };
 
 extern const Layout BASIC_LAYOUT;
+extern const Layout BIG_LAYOUT;
+extern const Layout TILES_LAYOUT;
+extern const Layout GRAPH_LAYOUT;
+#define LAYOUT_IDS {"basic", "big", "tiles", "graph"}
 
 // Shared drawing helpers (display.cpp)
 int uiHeader(Gfx& g, const char* title);  // draws the top bar, returns the y where content starts

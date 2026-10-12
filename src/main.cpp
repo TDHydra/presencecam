@@ -2,6 +2,7 @@
 // a tamper-evident event log. The board, sensors, display and layout come from the hardware
 // config written by the web flasher (see hwconfig.h). README.md has the details.
 #include <Arduino.h>
+#include "debuglog.h"
 #include <Wire.h>
 #include <esp_system.h>
 
@@ -10,10 +11,14 @@
 #include "console.h"
 #include "display.h"
 #include "eventlog.h"
+#include "health.h"
+#include "storage.h"
 #include "hwconfig.h"
 #include "net.h"
 #include "power.h"
 #include "presence.h"
+#include "rules.h"
+#include "camera/camera.h"
 #include "sensors/sensor.h"
 #include "settings.h"
 #include "web.h"
@@ -39,20 +44,25 @@ void setup() {
   int taps = buttonsCountResetTaps();
 
   settingsLoad();
-  hwBegin(taps >= 3);
-  int hold = hwPin(hw.as<JsonVariantConst>(), "hold");
-  if (hold >= 0) {  // keep a battery board on after the PWR button is released
-    pinMode(hold, OUTPUT);
-    digitalWrite(hold, HIGH);
+  hwBegin(taps >= 3 || healthCrashLoop());
+  // Board pins that must be driven right away: power hold on battery boards, RF switches...
+  for (JsonVariantConst o : hw["outputs"].as<JsonArrayConst>()) {
+    pinMode(hwPin(o, "gpio"), OUTPUT);
+    digitalWrite(hwPin(o, "gpio"), o["level"] | 1);
   }
   JsonVariantConst i2c = hw["i2c"];
   if (hwPin(i2c, "sda") >= 0 && hwPin(i2c, "scl") >= 0) Wire.begin(hwPin(i2c, "sda"), hwPin(i2c, "scl"));
+
+  storageBegin();  // after the outputs: some boards switch the card's power with one
+  debugBegin();
 
   displayBegin();
   displayMessage(FW_NAME, hwSafeMode ? "SAFE MODE" : FW_VERSION, 1500);
   displayLoop();
   sensorsBegin();
   presenceBegin();
+  cameraBegin();
+  rulesBegin();
   buttonsBegin();
   logBegin();
   netBegin();
@@ -61,6 +71,7 @@ void setup() {
     netStartSetupAp(10 * 60 * 1000);
   }
   webBegin();
+  healthBegin();
   printBanner(resetReason());
 }
 
@@ -83,10 +94,14 @@ void loop() {
   while (Serial.available()) improvFeed(Serial.read(), consoleByte);
   sensorsLoop();
   presenceLoop();
+  rulesLoop();
   buttonsLoop();
   netLoop();
   webLoop();
   displayLoop();
   consoleLoop();
+  storageLoop();
+  healthLoop();
+  debugLoop();
   delay(2);
 }

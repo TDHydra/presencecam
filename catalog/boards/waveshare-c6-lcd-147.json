@@ -1,0 +1,88 @@
+{
+  "id": "waveshare-c6-lcd-147",
+  "name": "Waveshare ESP32-C6-LCD-1.47",
+  "short": "ESP32-C6-LCD-1.47",
+  "chip": "ESP32-C6",
+  "notes": "Has a 1.47\" 172x320 ST7789 LCD, RGB LED (WS2812) and microSD slot on board; ESP32-C6FH4 with 4 MB flash in the chip and no PSRAM. Drawn from the LCD side with USB at the bottom; Waveshare's pinout picture shows the back of the board with USB at the top, so it is turned over here. GPIO4 and GPIO5 on the header are the SD card's CS and MISO and are kept free; GPIO9 on the header is the BOOT button. The LCD and SD card share GPIO6/7. TXD (GPIO16) has a 499 ohm series resistor. The ESP32-C6 has only one spare hardware UART (UART1).",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "5", "gpio": 5 },
+      { "label": "4", "gpio": 4 },
+      { "label": "3", "gpio": 3 },
+      { "label": "2", "gpio": 2 },
+      { "label": "1", "gpio": 1 },
+      { "label": "0", "gpio": 0 },
+      { "label": "3V3", "power": "3v3" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "5V", "power": "5v" }
+    ],
+    "right": [
+      { "label": "9", "gpio": 9 },
+      { "label": "18", "gpio": 18 },
+      { "label": "19", "gpio": 19 },
+      { "label": "20", "gpio": 20 },
+      { "label": "23", "gpio": 23 },
+      { "label": "12", "gpio": 12 },
+      { "label": "13", "gpio": 13 },
+      { "label": "RXD", "gpio": 17 },
+      { "label": "TXD", "gpio": 16 }
+    ]
+  },
+  "forbidden": {
+    "12": "USB D-",
+    "13": "USB D+",
+    "24": "flash",
+    "25": "flash",
+    "26": "flash",
+    "27": "flash",
+    "28": "flash",
+    "29": "flash",
+    "30": "flash"
+  },
+  "reserved": {
+    "4": "SD card chip select",
+    "5": "SD card data out",
+    "6": "LCD and SD card data",
+    "7": "LCD and SD card clock",
+    "8": "RGB LED",
+    "9": "BOOT button",
+    "14": "LCD chip select",
+    "15": "LCD data/command",
+    "21": "LCD reset",
+    "22": "LCD backlight"
+  },
+  "i2c": {
+    "sda": 19,
+    "scl": 20
+  },
+  "uarts": [
+    { "num": 1, "rx": 17, "tx": 16 }
+  ],
+  "digitalPrefer": [18, 23, 19, 20, 2, 3, 0, 1, 17, 16],
+  "led": 8,
+  "ledType": "ws2812",
+  "button": 9,
+  "displays": [
+    "builtin",
+    "ssd1306",
+    "none"
+  ],
+  "builtinDisplay": {
+    "name": "Built-in 1.47\" LCD (ST7789, 172x320)",
+    "config": {
+      "type": "st7789",
+      "mosi": 6,
+      "sclk": 7,
+      "cs": 14,
+      "dc": 15,
+      "rst": 21,
+      "bl": 22,
+      "w": 172,
+      "h": 320,
+      "xoff": 34,
+      "yoff": 0,
+      "invert": true
+    }
+  }
+}

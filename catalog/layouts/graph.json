@@ -1,0 +1,5 @@
+{
+  "id": "graph",
+  "name": "Graph",
+  "description": "Each reading with a graph of the last few minutes, and a presence timeline. One page per reading."
+}

@@ -11,6 +11,11 @@
 #include "power.h"
 #include "presence.h"
 #include "hwconfig.h"
+#include "rules.h"
+#include "camera/camera.h"
+#include "debuglog.h"
+#include "health.h"
+#include "storage.h"
 #include "sensors/sensor.h"
 #include "settings.h"
 #include "web_page.h"
@@ -35,6 +40,7 @@ static void sendStatus() {
   j["name"] = settings.name;
   j["fw"] = FW_VERSION;
   j["chip"] = FW_CHIP;
+  j["core"] = FW_CORE;
   j["board"] = hwBoardName();
   j["safeMode"] = hwSafeMode;
   j["presenceSensors"] = sensorsGivePresence();
@@ -52,10 +58,12 @@ static void sendStatus() {
     o["status"] = s->status();
   }
   JsonArray readings = j["readings"].to<JsonArray>();
+  // Every reading (the rules can use hidden ones too); "web" says whether the page shows it
   sensorsForEachReading([](Sensor& s, const Reading& r, void* ctx) {
     JsonObject o = ((JsonArray*)ctx)->add<JsonObject>();
     o["sensor"] = s.type();
     o["label"] = r.label;
+    o["web"] = sensorShows(&s, r.label, false);
     o["unit"] = r.unit;
     o["valid"] = r.valid;
     if (r.boolean) o["value"] = r.value != 0;
@@ -69,17 +77,37 @@ static void sendStatus() {
   st["screensleep"] = settings.screenSleepS;
   st["screenflip"] = settings.screenFlip;
   j["display"] = displayDescribe();
+  j["camera"] = cameraStatus();
+  j["hasCamera"] = cameraPresent();
 
   JsonObject w = j["wifi"].to<JsonObject>();
   w["ssid"] = settings.wifiSsid;
   w["connected"] = netConnected();
   w["ip"] = netIp();
   w["rssi"] = netRssi();
-  w["wired"] = (bool)NET_WIRED;
+  w["wired"] = netWired();
   w["ap"] = netApActive();
   w["host"] = netHostname() + ".local";
   w["power"] = powerSummary();
   w["txpower"] = settings.wifiTxPower;
+  w["addressing"] = netAddressing();
+  w["static"] = settings.staticIp;
+  w["sip"] = settings.ip;
+  w["smask"] = settings.mask;
+  w["sgw"] = settings.gateway;
+  w["sdns"] = settings.dns;
+  j["debug"] = debugEnabled();
+  j["debugBytes"] = debugLogBytes();
+  j["storage"] = storageDescribe();
+  j["health"] = healthSummary();
+  JsonArray probs = j["problems"].to<JsonArray>();
+  Problem list[12];
+  int n = healthProblems(list, 12);
+  for (int i = 0; i < n; i++) {
+    JsonObject o = probs.add<JsonObject>();
+    o["what"] = list[i].what;
+    o["fix"] = list[i].fix;
+  }
   w["brownouts"] = powerBrownouts();
 
   j["time"] = (uint32_t)time(nullptr);
@@ -89,6 +117,50 @@ static void sendStatus() {
   String out;
   serializeJson(j, out);
   server.send(200, "application/json", out);
+}
+
+// --- rules and photos ------------------------------------------------------------------
+
+static void sendRules() { server.send(200, "application/json", rulesJson()); }
+
+static void postRules() {
+  String err = rulesSet(server.arg("plain"));
+  if (err.length()) server.send(400, "text/plain", err);
+  else server.send(200, "text/plain", "ok");
+}
+
+static void sendPhotos() {
+  JsonDocument j;
+  j["status"] = cameraStatus();
+  JsonArray list = j["photos"].to<JsonArray>();
+  for (int i = 0; i < cameraPhotoCount(); i++) {
+    PhotoInfo info;
+    if (!cameraPhotoAt(i, info)) continue;
+    JsonObject o = list.add<JsonObject>();
+    o["path"] = info.path;
+    o["time"] = info.time;
+    o["reason"] = info.reason;
+    o["bytes"] = info.bytes;
+  }
+  String out;
+  serializeJson(j, out);
+  server.send(200, "application/json", out);
+}
+
+static void sendPhoto() {
+  String path = server.arg("p");
+  if (!path.startsWith("/photos/") || path.indexOf("..") >= 0) { server.send(400, "text/plain", "bad path"); return; }
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "image/jpeg", "");
+  if (!cameraSendPhoto(path, server.client())) server.client().stop();
+}
+
+static void postSnap() {
+  if (!cameraPresent()) { server.send(400, "text/plain", "no camera"); return; }
+  String path = cameraCapture("web page");
+  if (!path.length()) { server.send(500, "text/plain", "capture failed: " + cameraStatus()); return; }
+  logEvent("photo", path + " (web page)");
+  server.send(200, "text/plain", path);
 }
 
 // The active hardware config plus a flat pin list for the "Hardware" card.
@@ -157,10 +229,41 @@ static void postSettings() {
   sendStatus();
 }
 
+static void postNetwork() {
+  settings.staticIp = server.arg("mode") == "static";
+  settings.ip = server.arg("ip");
+  settings.mask = server.arg("mask").length() ? server.arg("mask") : "255.255.255.0";
+  settings.gateway = server.arg("gw");
+  settings.dns = server.arg("dns");
+  String err = netApplyAddressing();
+  if (err.length()) { server.send(400, "text/plain", err); return; }
+  settingsSave();
+  logEvent("network", netAddressing());
+  // A new address means this page's connection goes away; answer first, then restart so the
+  // interface takes the address cleanly.
+  server.send(200, "text/plain", "saved, restarting with " + netAddressing());
+  delay(300);
+  ESP.restart();
+}
+
+static void postDebug() {
+  if (server.hasArg("on")) debugSetEnabled(server.arg("on") == "1");
+  if (server.hasArg("clear")) debugClear();
+  server.send(200, "text/plain", debugEnabled() ? "debug on" : "debug off");
+}
+
+static void sendDebugLog() {
+  server.sendHeader("Content-Disposition", "attachment; filename=\"" + netHostname() + "-debug.log\"");
+  server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+  server.send(200, "text/plain", "");
+  if (!debugSendLog(server.client())) server.client().print("(no debug log yet)\n");
+  server.client().stop();
+}
+
 static void postWifi() {
   String ssid = server.arg("ssid"), pass = server.arg("pass");
   if (!ssid.length()) { server.send(400, "text/plain", "ssid missing"); return; }
-  if (NET_WIRED) { server.send(400, "text/plain", "this board has no Wi-Fi"); return; }
+  if (netWired()) { server.send(400, "text/plain", "this board is set up for Ethernet"); return; }
   // Answer first: if we're on the setup AP, the phone may lose the page while we switch.
   server.send(200, "text/plain", "joining");
   delay(200);
@@ -212,9 +315,17 @@ void webBegin() {
   server.on("/api/log.txt", HTTP_GET, sendLogFile);
   server.on("/api/verify", HTTP_GET, sendVerify);
   server.on("/api/hardware", HTTP_GET, sendHardware);
+  server.on("/api/rules", HTTP_GET, sendRules);
+  server.on("/api/rules", HTTP_POST, postRules);
+  server.on("/api/photos", HTTP_GET, sendPhotos);
+  server.on("/api/snap", HTTP_POST, postSnap);
+  server.on("/photo", HTTP_GET, sendPhoto);
   server.on("/api/settings", HTTP_GET, sendStatus);
   server.on("/api/settings", HTTP_POST, postSettings);
   server.on("/api/wifi", HTTP_POST, postWifi);
+  server.on("/api/network", HTTP_POST, postNetwork);
+  server.on("/api/debug", HTTP_POST, postDebug);
+  server.on("/api/debug.log", HTTP_GET, sendDebugLog);
   server.on("/api/scan", HTTP_GET, sendScan);
   server.on("/api/reboot", HTTP_POST, [] {
     server.send(200, "text/plain", "restarting");

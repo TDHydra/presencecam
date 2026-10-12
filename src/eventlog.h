@@ -1,6 +1,6 @@
 // Tamper-evident event log, kept from the original PresenceCam.
 //
-// Every event is one text line in LittleFS (/log.txt):
+// Every event is one text line in storageFs() (/log.txt; the microSD card if there is one, else flash):
 //
 //   n|unix_time|uptime_s|event|detail|prev|mac
 //

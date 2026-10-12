@@ -13,3 +13,5 @@ struct Presence {
 void presenceBegin();  // sets up the status LED from the hardware config
 void presenceLoop();
 const Presence& presence();
+// A rule takes over the status LED: while active, the LED shows `on` instead of presence
+void presenceLedOverride(bool active, bool on);

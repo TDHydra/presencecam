@@ -1,0 +1,15 @@
+{
+  "id": "hcsr501",
+  "name": "HC-SR501 PIR motion sensor",
+  "short": "HC-SR501 PIR",
+  "bus": "gpio",
+  "supply": "5v",
+  "presence": true,
+  "description": "Passive infrared: sees people moving, not people sitting still. Needs 5 V, but its OUT pin is 3.3 V. Set the jumper to H (retrigger), turn the time knob fully anticlockwise (shortest) and let the hold time setting do the rest. It needs about a minute to settle after power-up.",
+  "pins": [
+    {"label": "VCC", "role": "vcc"},
+    {"label": "OUT", "role": "digital_in", "key": "out"},
+    {"label": "GND", "role": "gnd"}
+  ],
+  "readings": [{"key": "Motion", "label": "Motion (yes/no)"}]
+}

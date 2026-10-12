@@ -36,8 +36,14 @@ void sensorsBegin();
 void sensorsLoop();
 int sensorsCount();
 Sensor* sensorAt(int i);
+JsonVariantConst sensorConfig(int i);  // the sensor's entry in hw["sensors"]
+int sensorsRetry();  // begin() again on sensors that weren't found; returns how many now answer
 bool sensorsGivePresence();  // at least one fitted sensor can detect presence
 bool sensorsPresence();
 String sensorsPresenceDetail();
 // Calls cb for every reading of every sensor, in config order.
 void sensorsForEachReading(void (*cb)(Sensor& s, const Reading& r, void* ctx), void* ctx);
+// Same, but only the readings the setup shows on the screen (screen = true) or the web page
+// (sensors[i].show in the hardware config). Rules and the console use every reading.
+void sensorsForEachShown(bool screen, void (*cb)(Sensor& s, const Reading& r, void* ctx), void* ctx);
+bool sensorShows(const Sensor* s, const char* label, bool screen);  // the same test for one reading

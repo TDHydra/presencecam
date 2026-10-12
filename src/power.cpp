@@ -1,4 +1,5 @@
 #include "power.h"
+#include "debuglog.h"
 
 #include <esp_attr.h>
 #include <esp_system.h>

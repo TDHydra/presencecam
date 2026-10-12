@@ -1,4 +1,5 @@
 #include "display.h"
+#include "../debuglog.h"
 
 #include <lgfx/utility/lgfx_qrcode.h>
 
@@ -27,7 +28,8 @@ static uint32_t holdMs = 0, holdNextAt = 0;
 static const char *holdNow = nullptr, *holdNext = nullptr;
 
 static const Layout* layoutFind(const String& id) {
-  if (id == "basic") return &BASIC_LAYOUT;
+  for (const Layout* l : {&BASIC_LAYOUT, &BIG_LAYOUT, &TILES_LAYOUT, &GRAPH_LAYOUT})
+    if (id == l->id) return l;
   return &BASIC_LAYOUT;
 }
 
@@ -116,7 +118,7 @@ String uiDuration(uint32_t s) {
 int uiHeader(Gfx& g, const char* title) {
   bool tall = g.height() >= 120;
   g.font(F_SMALL);
-  const char* w = netConnected() ? (NET_WIRED ? "LAN" : "WiFi") : (netApActive() ? "AP" : "--");
+  const char* w = netConnected() ? (netWired() ? "LAN" : "WiFi") : (netApActive() ? "AP" : "--");
   int top = tall ? 30 : 13;
   if (tall) g.fillRect(0, 0, g.width(), 24, C_ACCENT);
   g.text(tall ? 4 : 0, tall ? 4 : 0, title);
@@ -143,8 +145,8 @@ static void pageNetwork(Gfx& g) {
     y = line(g, y, F_SMALL, netLink(), C_MUTED);
     y = line(g, y, F_MEDIUM, netIp());
     y = line(g, y, F_SMALL, netHostname() + ".local");
-    if (!NET_WIRED) line(g, y, F_SMALL, "signal " + String(netRssi()) + " dBm", C_MUTED);
-  } else if (NET_WIRED) {
+    if (!netWired()) line(g, y, F_SMALL, "signal " + String(netRssi()) + " dBm", C_MUTED);
+  } else if (netWired()) {
     y = line(g, y, F_SMALL, "Ethernet", C_MUTED);
     line(g, y, F_SMALL, "plug in a network cable");
   } else if (netApActive()) {
@@ -204,7 +206,7 @@ static void drawInfo(Gfx& g) {
     l2 = "PresenceCam-";
     l3 = deviceId();
   } else {
-    l1 = NET_WIRED ? "No network yet" : "No Wi-Fi yet";
+    l1 = netWired() ? "No network yet" : "No Wi-Fi yet";
   }
   if (g.height() >= 120) {
     int px = qr.length() ? drawQr(g, qr, 10, 8, g.width() - 20) : 0;

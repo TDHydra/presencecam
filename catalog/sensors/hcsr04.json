@@ -1,0 +1,19 @@
+{
+  "id": "hcsr04",
+  "name": "HC-SR04 ultrasonic distance",
+  "short": "HC-SR04 ultrasonic",
+  "bus": "gpio",
+  "supply": "5v",
+  "presence": false,
+  "description": "Measures distance by sound, 2-400 cm, in a narrow cone. Needs 5 V, and its ECHO pin answers at 5 V: put a 1 kΩ + 2 kΩ divider (or any 1:2 pair) between ECHO and the board, or the pin may be damaged. The HC-SR04+ / RCWL-1601 3.3 V versions need no divider.",
+  "pins": [
+    {"label": "VCC", "role": "vcc"},
+    {"label": "TRIG", "role": "digital_out", "key": "trig"},
+    {"label": "ECHO", "role": "digital_in", "key": "echo"},
+    {"label": "GND", "role": "gnd"}
+  ],
+  "options": [
+    {"key": "presenceCm", "label": "Also count as presence when something is closer than (cm, 0 = off)", "type": "number", "default": 0, "min": 0, "max": 400}
+  ],
+  "readings": [{"key": "Ultrasonic", "label": "Ultrasonic distance cm"}]
+}

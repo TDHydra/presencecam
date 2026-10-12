@@ -1,0 +1,80 @@
+{
+  "id": "ai-thinker-esp32-cam",
+  "name": "AI-Thinker ESP32-CAM (on ESP32-CAM-MB USB board)",
+  "short": "ESP32-CAM",
+  "chip": "ESP32",
+  "notes": "The ESP32-CAM has no USB port; it plugs onto the ESP32-CAM-MB board (CH340 USB serial on GPIO1/3, IO0 and RST buttons). Drawn from the camera side with the MB's micro-USB at the bottom: that is the end with the flash LED and camera ribbon connector, and the micro-SD slot is at the top. This matches the usual RandomNerdTutorials pinout picture, no rotation needed. On the MB the header pins sit inside its sockets, so wires go to the pin stubs on the camera side or to a breakout between the two boards. Only four header GPIOs are free (13, 14, 15, 2): GPIO12 must be low at power-up (it sets the flash voltage) so nothing that can pull it high may go there, GPIO4 drives the flash LED, GPIO16 is the PSRAM chip select, GPIO0 is the boot strap and GPIO1/3 are the USB serial port. GPIO2, 13, 15 have 47k pull-ups for the SD card. The VCC pin is a 3.3 V output (5 V on boards built with the other 0R jumper). The camera and SD card are not used. The red LED (GPIO33, active low) is on the back. The page button is the MB's IO0 button; there is no button on the ESP32-CAM itself.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "5V", "power": "5v" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "IO12", "gpio": 12 },
+      { "label": "IO13", "gpio": 13 },
+      { "label": "IO15", "gpio": 15 },
+      { "label": "IO14", "gpio": 14 },
+      { "label": "IO2", "gpio": 2 },
+      { "label": "IO4", "gpio": 4 }
+    ],
+    "right": [
+      { "label": "3V3", "power": "3v3" },
+      { "label": "IO16", "gpio": 16 },
+      { "label": "IO0", "gpio": 0 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "VCC" },
+      { "label": "U0R", "gpio": 3 },
+      { "label": "U0T", "gpio": 1 },
+      { "label": "GND", "power": "gnd" }
+    ]
+  },
+  "forbidden": {
+    "1": "USB serial TX (ESP32-CAM-MB)",
+    "3": "USB serial RX (ESP32-CAM-MB)",
+    "6": "flash",
+    "7": "flash",
+    "8": "flash",
+    "9": "flash",
+    "10": "flash",
+    "11": "flash",
+    "16": "PSRAM chip select",
+    "17": "PSRAM clock"
+  },
+  "reserved": {
+    "0": "boot strap, IO0 button on the ESP32-CAM-MB, camera XCLK",
+    "4": "flash LED (also SD DATA1)",
+    "5": "camera",
+    "12": "strapping pin: must be low at power-up (flash voltage), anything pulling it high stops the board booting",
+    "18": "camera",
+    "19": "camera",
+    "21": "camera",
+    "22": "camera",
+    "23": "camera",
+    "25": "camera",
+    "26": "camera I2C",
+    "27": "camera I2C",
+    "32": "camera power",
+    "33": "red LED",
+    "34": "camera",
+    "35": "camera",
+    "36": "camera",
+    "39": "camera"
+  },
+  "i2c": {
+    "sda": 14,
+    "scl": 15
+  },
+  "uarts": [
+    { "num": 2, "rx": 13, "tx": 2 }
+  ],
+  "digitalPrefer": [13, 14, 15, 2],
+  "led": 33,
+  "ledType": "gpio_low",
+  "button": 0,
+  "bootOutputs": [
+    { "gpio": 4, "level": 0, "what": "flash LED off" }
+  ],
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

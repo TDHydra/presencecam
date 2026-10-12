@@ -1,0 +1,48 @@
+{
+  "id": "arducam_mega",
+  "name": "Arducam Mega 3MP / 5MP SPI camera",
+  "short": "Arducam Mega",
+  "chips": [
+    "ESP32",
+    "ESP32-S3",
+    "ESP32-C3",
+    "ESP32-C6",
+    "ESP32-P4"
+  ],
+  "bus": "spi",
+  "supply": "3v3",
+  "description": "Takes a JPEG when a rule fires or from the web page. Any four free GPIOs work for CS, MOSI, MISO and SCK (the camera is the only device on this SPI bus). VCC takes 3.3 V or 5 V. The fixed-focus 3MP and the autofocus 5MP wire the same; go by the labels printed on the 6-pin header. Photos are kept in the chip's flash: 3 at 320x240 on 4 MB boards, 20 at 640x480 on 16 MB boards.",
+  "pins": [
+    {
+      "label": "VCC",
+      "role": "vcc"
+    },
+    {
+      "label": "GND",
+      "role": "gnd"
+    },
+    {
+      "label": "SCK",
+      "role": "spi_sck",
+      "key": "sck"
+    },
+    {
+      "label": "MISO",
+      "role": "spi_miso",
+      "key": "miso"
+    },
+    {
+      "label": "MOSI",
+      "role": "spi_mosi",
+      "key": "mosi"
+    },
+    {
+      "label": "CS",
+      "role": "spi_cs",
+      "key": "cs"
+    }
+  ],
+  "config": {
+    "type": "arducam_mega"
+  }
+}

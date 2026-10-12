@@ -13,6 +13,10 @@ struct Settings {
   bool lowPowerLatched;   // auto mode found low power necessary (see power.h)
   String wifiSsid;
   String wifiPass;
+  // Addressing, for Wi-Fi and Ethernet alike: DHCP, or a fixed address
+  bool staticIp;
+  String ip, mask, gateway, dns;
+  bool debug;             // debug mode: everything on the console also goes to the debug log
 };
 
 extern Settings settings;

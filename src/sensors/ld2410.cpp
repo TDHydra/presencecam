@@ -1,6 +1,12 @@
 // HLK-LD2410 (B/C) 24 GHz radar. Over UART it gives distance and signal energy for moving
 // and still targets; its OUT pin goes high on presence. Either or both can be wired. With
 // only OUT wired (or no UART frames arriving), it behaves like an RCWL-0516.
+#include <soc/soc_caps.h>
+#include "../debuglog.h"
+#ifndef SOC_UART_HP_NUM  // IDF 4.4 (Arduino core 2)
+#define SOC_UART_HP_NUM SOC_UART_NUM
+#endif
+
 #include "sensors.h"
 
 #include "settings.h"
@@ -63,7 +69,11 @@ class LD2410 : public Sensor {
     int rx = hwPin(cfg, "rx"), tx = hwPin(cfg, "tx");
     if (outPin >= 0) pinMode(outPin, INPUT_PULLDOWN);
     if (rx >= 0) {
+#if SOC_UART_HP_NUM > 2
       port = (cfg["uart"] | 2) == 1 ? &Serial1 : &Serial2;
+#else
+      port = &Serial1;  // ESP32-C3 / C6: UART1 is the only free one
+#endif
       port->begin(256000, SERIAL_8N1, rx, tx);
     }
     return true;  // the LD2410 never answers on its own; status() shows whether frames arrive

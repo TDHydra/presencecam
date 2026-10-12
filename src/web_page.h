@@ -8,7 +8,8 @@ static const char WEB_PAGE[] PROGMEM = R"HTML(<!doctype html>
 <title>PresenceCam</title>
 <style>
 :root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--mut:#667085;--line:#e3e6ec;--acc:#2563eb;--ok:#14894a;--bad:#c2341d;--on:#f59e0b}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1218;--card:#181c24;--fg:#e6e9ef;--mut:#8b93a3;--line:#2a303c;--acc:#5b8dff;--ok:#3fbf7a;--bad:#ff6b52;--on:#fbbf24}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1218;--card:#181c24;--fg:#e6e9ef;--mut:#8b93a3;--line:#2a303c;--acc:#5b8dff;--ok:#3fbf7a;--bad:#ff6b52;--on:#fbbf24}}
+:root[data-theme=dark]{--bg:#0f1218;--card:#181c24;--fg:#e6e9ef;--mut:#8b93a3;--line:#2a303c;--acc:#5b8dff;--ok:#3fbf7a;--bad:#ff6b52;--on:#fbbf24}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 main{max-width:760px;margin:0 auto;padding:16px}
 h1{font-size:1.3rem;margin:4px 0 2px}h2{font-size:1rem;margin:0 0 10px}
@@ -21,6 +22,9 @@ h1{font-size:1.3rem;margin:4px 0 2px}h2{font-size:1rem;margin:0 0 10px}
 .state{font-size:2rem;font-weight:700;line-height:1.1}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:14px}
 .kv{background:var(--bg);border-radius:8px;padding:8px 10px}.kv b{display:block;font-size:1.1rem}
+.grid.list{grid-template-columns:1fr;gap:4px}.grid.list .kv{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.grid.list .kv .bar{flex-basis:100%;margin-top:2px}
+.grid.big{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.grid.big .kv{padding:14px 16px}.grid.big .kv b{font-size:2.4rem;line-height:1.1}
+#more{display:block;margin:14px auto}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .3s}
 table{width:100%;border-collapse:collapse;font-size:.9rem}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 .badge{display:inline-block;padding:2px 9px;border-radius:99px;font-weight:600;font-size:.8rem;color:#fff}.badge.ok{background:var(--ok)}.badge.bad{background:var(--bad)}
@@ -43,21 +47,34 @@ details summary{cursor:pointer;font-weight:600}
 <p class="mut" id="sens" style="margin:12px 0 0"></p>
 </section>
 
-<section class="card"><h2>Event log <span id="vbadge"></span></h2>
+<section class="card" data-k="log"><h2>Event log <span id="vbadge"></span></h2>
 <div id="vreport" class="mut"></div>
 <div class="tw"><table><thead><tr><th>#</th><th>When</th><th>Event</th><th>Detail</th></tr></thead><tbody id="log"></tbody></table></div>
 <button class="sec" onclick="loadLog()">Refresh</button> <button class="sec" onclick="location='/api/log.txt'">Download log</button>
 <details style="margin-top:12px"><summary>How the log is protected</summary><p class="mut">Each line carries an HMAC-SHA256 signature made with a secret key that never leaves the device, plus the signature of the line before it. Editing, deleting or reordering lines breaks the chain, and the check above says where. The line counter is kept separately, so deleting the whole log is noticed too. Older lines rotate out after about 48 KB.</p></details>
 </section>
 
-<section class="card"><h2>Hardware</h2>
+<section class="card" data-k="rules"><h2>Rules</h2>
+<p class="mut">When a reading crosses a value, do something. A rule fires when its condition becomes true, then waits at least the given time before firing again. "Light the LED" keeps the status LED on while the condition holds.</p>
+<div class="tw"><table><thead><tr><th>When</th><th>is</th><th>Value</th><th>Do</th><th>At most every</th><th></th></tr></thead><tbody id="rules"></tbody></table></div>
+<button class="sec" type="button" onclick="addRule()">Add rule</button> <button type="button" onclick="saveRules()">Save rules</button> <span id="rmsg" class="mut"></span>
+<pre class="mono mut" id="rstat"></pre>
+</section>
+
+<section class="card" id="photosec" data-k="photos" hidden><h2>Photos</h2>
+<p class="mut" id="camstat"></p>
+<button type="button" onclick="snap()">Take a photo now</button> <span id="pmsg" class="mut"></span>
+<div class="grid" id="photos"></div>
+</section>
+
+<section class="card" data-k="hardware"><h2>Hardware</h2>
 <p class="mut" id="hwsum"></p>
 <div class="tw"><table><thead><tr><th>Connection</th><th>GPIO</th></tr></thead><tbody id="pins"></tbody></table></div>
 <p class="mut">To change the board, sensors, display or layout, open the web flasher, choose them there and press <em>Send setup to board</em>. No reflash needed.</p>
 <details><summary>Config JSON</summary><pre class="mono" id="hwjson"></pre></details>
 </section>
 
-<section class="card"><h2>Settings</h2><form id="sf">
+<section class="card" data-k="admin"><h2>Settings</h2><form id="sf">
 <label for="sname">Device name</label><input id="sname" name="name" maxlength="32">
 <div class="row"><div><label for="hold">Hold time (seconds)</label><input id="hold" name="hold" type="number" min="1" max="3600"></div>
 <div><label for="maxcm">Max distance (cm, LD2410 only)</label><input id="maxcm" name="maxcm" type="number" min="30" max="800"></div></div>
@@ -66,36 +83,73 @@ details summary{cursor:pointer;font-weight:600}
 <label for="screensleep">Screen off after nobody is present for (s, 0 = never)</label><input id="screensleep" name="screensleep" type="number" min="0"></div></div>
 <button>Save settings</button> <span id="smsg" class="mut"></span></form></section>
 
-<section class="card" id="wsec"><h2>Wi-Fi</h2><p class="mut" id="wstat"></p><form id="wf">
+<section class="card" data-k="admin"><h2>Network address</h2><p class="mut" id="nstat"></p><form id="nf">
+<div class="row"><div><label for="nmode">Addressing</label><select id="nmode" name="mode"><option value="dhcp">Automatic (DHCP)</option><option value="static">Fixed address</option></select></div>
+<div><label for="nip">IP address</label><input id="nip" name="ip" placeholder="192.168.1.50"></div></div>
+<div class="row"><div><label for="nmask">Subnet mask</label><input id="nmask" name="mask" placeholder="255.255.255.0"></div>
+<div><label for="ngw">Gateway</label><input id="ngw" name="gw" placeholder="192.168.1.1"></div></div>
+<label for="ndns">DNS (optional)</label><input id="ndns" name="dns" placeholder="same as gateway">
+<button>Save and restart</button> <span id="nmsg" class="mut"></span></form>
+<p class="mut">Applies to Wi-Fi and Ethernet alike. With a fixed address the board doesn't need DHCP, which helps on a bare PoE switch.</p></section>
+
+<section class="card" id="wsec" data-k="admin"><h2>Wi-Fi</h2><p class="mut" id="wstat"></p><form id="wf">
 <label for="ssid">Network</label><input id="ssid" name="ssid" list="nets" autocomplete="off"><datalist id="nets"></datalist>
 <label for="pass">Password</label><input id="pass" name="pass" type="password">
 <button>Connect</button> <button type="button" class="sec" onclick="scan()">Scan</button> <span id="wmsg" class="mut"></span></form></section>
 
-<section class="card"><h2>Firmware</h2><p class="mut" id="fw"></p>
+<section class="card" data-k="health"><h2>Health</h2><p id="health"></p><ul id="problems"></ul>
+<p class="mut">Checked every few seconds: sensors that don't answer, a missing card or camera, weak power, a setup made for another board. Sensors that weren't found are tried again every 30 s.</p></section>
+
+<section class="card" data-k="debug"><h2>Debug log</h2><p class="mut" id="dstat"></p>
+<p class="mut">In debug mode everything the serial console prints, plus memory, network and sensor status every 30 s, is saved to the card or flash with timestamps. Switch it on, leave the board where it runs, then bring it back and download the log here or type <code>debug show</code> on the console. It survives restarts.</p>
+<button type="button" id="dtoggle" onclick="debugToggle()"></button> <button class="sec" type="button" onclick="location='/api/debug.log'">Download</button> <button class="sec" type="button" onclick="debugClear()">Clear</button> <span id="dmsg" class="mut"></span>
+<p class="mut" id="storage"></p></section>
+
+<section class="card" data-k="admin"><h2>Firmware</h2><p class="mut" id="fw"></p>
 <form id="uf"><label for="bin">Update with a .bin file (presencecam-ota.bin from the releases page)</label><input id="bin" type="file" accept=".bin">
 <button>Upload</button> <button type="button" class="sec" onclick="reboot()">Restart</button> <span id="umsg" class="mut"></span></form></section>
+<button class="sec" id="more" type="button" hidden onclick="showAll()">Settings and more</button>
 </main>
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dur=s=>s<60?s+' s':s<3600?Math.floor(s/60)+' min '+(s%60)+' s':Math.floor(s/3600)+' h '+Math.floor(s%3600/60)+' min';
-let S=null,formFilled=false;
+let S=null,formFilled=false,photosLoaded=false,W={},hidden=new Set(),showingAll=false;
+// The page's look, from the setup the web flasher made (hardware config "web")
+function applyLook(w){W=w||{};const r=document.documentElement;
+ if(W.theme=='dark'||W.theme=='light')r.dataset.theme=W.theme;else delete r.dataset.theme;
+ if(/^#[0-9a-fA-F]{6}$/.test(W.accent||''))r.style.setProperty('--acc',W.accent);
+ $('readings').className='grid'+(W.style=='list'||W.style=='big'?' '+W.style:'');
+ hidden=new Set(W.hide||[]);if(W.admin=='collapsed')hidden.add('admin');sections()}
+function sections(){let any=false;for(const el of document.querySelectorAll('[data-k]')){const k=el.dataset.k;
+  if(k=='photos'&&!(S&&S.hasCamera))continue;const h=!showingAll&&hidden.has(k);any=any||h;el.hidden=h}
+ $('more').hidden=!any}
+function showAll(){showingAll=true;sections()}
 async function status(){
  try{S=await (await fetch('/api/status')).json()}catch(e){$('sub').textContent='device not reachable, retrying…';return}
- $('name').textContent=S.name;document.title=S.name;
+ $('name').textContent=W.title||S.name;document.title=W.title||S.name;
  $('sub').textContent=(S.wifi.connected?S.wifi.ip+' · '+S.wifi.host:'setup mode')+' · up '+dur(S.uptime)+(S.safeMode?' · SAFE MODE':'');
  $('dot').classList.toggle('on',S.present);
  $('state').textContent=!S.presenceSensors?'Sensor readings':S.present?'Someone is here':'Nobody here';
  $('for').textContent=S.presenceSensors?'for '+dur(S.stateFor)+' · '+S.visitsToday+' visit(s) today':'';
- $('readings').innerHTML=S.readings.map(r=>{const v=!r.valid?'—':typeof r.value=='boolean'?(r.value?'yes':'no'):(Math.round(r.value*10)/10)+' '+esc(r.unit);
+ $('readings').innerHTML=S.readings.filter(r=>r.web!==false).map(r=>{const v=!r.valid?'—':typeof r.value=='boolean'?(r.value?'yes':'no'):(Math.round(r.value*10)/10)+' '+esc(r.unit);
   const bar=r.max?`<div class="bar"><i style="width:${r.valid?Math.min(100,r.value/r.max*100):0}%"></i></div>`:'';
   return `<div class="kv"><span class="mut">${esc(r.label)}</span><b>${v}</b>${bar}</div>`}).join('')||'<p class="mut">No sensors set up yet.</p>';
  $('sens').textContent=S.sensors.map(x=>x.title+': '+x.status).join(' · ')+' · display: '+S.display;
  $('wstat').textContent=(S.wifi.connected?'Connected to '+S.wifi.ssid+' ('+S.wifi.rssi+' dBm). Also reachable as http://'+S.wifi.host:(S.wifi.ssid?'Trying to join '+S.wifi.ssid+'…':'Not set up yet.'))+' · '+S.wifi.power+(S.wifi.brownouts?' · '+S.wifi.brownouts+' brownout reset(s) before this start':'');
  if(S.wifi.wired){$('wsec').hidden=$('txw').hidden=$('txpower').disabled=true}
- $('fw').textContent='Version '+S.fw+' · free memory '+Math.round(S.heap/1024)+' KB';
+ labels=S.readings.map(r=>r.label);if(!rulesLoaded)loadRules();
+ $('nstat').textContent='Now: '+S.wifi.addressing+(S.wifi.connected?' · '+S.wifi.ip:'');
+ $('health').innerHTML=S.problems.length?'<span class="badge bad">'+S.problems.length+' problem'+(S.problems.length>1?'s':'')+'</span>':'<span class="badge ok">All good</span>';
+ $('problems').innerHTML=S.problems.map(p=>`<li><b>${esc(p.what)}</b><br><span class="mut">${esc(p.fix)}</span></li>`).join('');
+ $('dtoggle').textContent=S.debug?'Turn debug mode off':'Turn debug mode on';$('dtoggle').dataset.on=S.debug?'1':'0';
+ $('dstat').textContent=S.debug?'Debug mode is ON · log '+Math.round(S.debugBytes/1024)+' KB':'Debug mode is off'+(S.debugBytes?' · log from before: '+Math.round(S.debugBytes/1024)+' KB':'');
+ $('storage').textContent='Storage: '+S.storage;
+ if(S.hasCamera&&!photosLoaded){photosLoaded=true;sections();loadPhotos()}
+ $('fw').textContent='Version '+S.fw+' ('+S.chip+', Arduino '+S.core+')'+' · free memory '+Math.round(S.heap/1024)+' KB';
  if(!formFilled){formFilled=true;const st=S.settings;$('sname').value=S.name;$('hold').value=st.hold;$('maxcm').value=st.maxcm;
-  $('screenflip').value=st.screenflip?1:0;$('screensleep').value=st.screensleep;$('txpower').value=S.wifi.txpower;$('ssid').value=S.wifi.ssid}
+  $('screenflip').value=st.screenflip?1:0;$('screensleep').value=st.screensleep;$('txpower').value=S.wifi.txpower;$('ssid').value=S.wifi.ssid;
+  $('nmode').value=S.wifi.static?'static':'dhcp';$('nip').value=S.wifi.sip;$('nmask').value=S.wifi.smask;$('ngw').value=S.wifi.sgw;$('ndns').value=S.wifi.sdns}
 }
 function when(t,up){return t>1700000000?new Date(t*1000).toLocaleString():'uptime '+dur(+up)}
 async function loadLog(){
@@ -118,7 +172,22 @@ $('uf').onsubmit=e=>{e.preventDefault();const f=$('bin').files[0];if(!f)return;c
  x.onload=()=>{$('umsg').textContent=x.responseText+(x.status==200?'. Reloading in 10 s…':'');if(x.status==200)setTimeout(()=>location.reload(),10000)};
  x.open('POST','/update');x.send(fd)};
 async function reboot(){if(confirm('Restart the device?')){await fetch('/api/reboot',{method:'POST'}).catch(()=>{});$('umsg').textContent='Restarting…';setTimeout(()=>location.reload(),8000)}}
-async function hardware(){const h=await (await fetch('/api/hardware')).json();const c=h.config;
+let rulesLoaded=false,labels=[];
+const OPS={'<':'below','>':'above','is':'is'},DOS={photo:'take a photo',led:'light the LED',log:'write a log line'};
+function ruleRow(r,i){const opts=['presence',...labels].map(l=>`<option${l==r.when?' selected':''}>${esc(l)}</option>`).join('');
+ return `<tr data-i="${i}"><td><select class="rw">${opts}</select></td><td><select class="ro">${Object.entries(OPS).map(([k,v])=>`<option value="${k}"${k==r.op?' selected':''}>${v}</option>`).join('')}</select></td><td><input class="rv" type="number" step="any" value="${esc(r.value)}" style="width:6em"></td><td><select class="rd">${Object.entries(DOS).map(([k,v])=>`<option value="${k}"${k==r.do?' selected':''}>${v}</option>`).join('')}</select></td><td><input class="re" type="number" min="0" value="${esc(r.every??10)}" style="width:5em"> s</td><td><button class="sec" type="button" onclick="this.closest('tr').remove()">✕</button></td></tr>`}
+async function loadRules(){const r=await (await fetch('/api/rules')).json();$('rules').innerHTML=r.map(ruleRow).join('')||'';rulesLoaded=true}
+function addRule(){const tr=document.createElement('tbody');tr.innerHTML=ruleRow({when:labels[0]||'presence',op:'<',value:0,do:'log',every:10},0);$('rules').appendChild(tr.firstElementChild)}
+async function saveRules(){const rules=[...$('rules').querySelectorAll('tr')].map(t=>({when:t.querySelector('.rw').value,op:t.querySelector('.ro').value,value:+t.querySelector('.rv').value,do:t.querySelector('.rd').value,every:+t.querySelector('.re').value}));
+ const r=await fetch('/api/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rules)});$('rmsg').textContent=r.ok?'Saved.':'Not saved: '+await r.text();loadLog()}
+async function loadPhotos(){const p=await (await fetch('/api/photos')).json();$('camstat').textContent=p.status;
+ $('photos').innerHTML=p.photos.map(x=>`<a href="/photo?p=${encodeURIComponent(x.path)}" target="_blank"><img src="/photo?p=${encodeURIComponent(x.path)}" style="width:100%;border-radius:8px" loading="lazy"><div class="mut">${esc(when(x.time,0))} · ${esc(x.reason)} · ${Math.round(x.bytes/1024)} KB</div></a>`).join('')||'<p class="mut">No photos yet.</p>'}
+async function snap(){$('pmsg').textContent='Taking…';const r=await fetch('/api/snap',{method:'POST'});$('pmsg').textContent=r.ok?'Done.':await r.text();loadPhotos();loadLog()}
+$('nf').onsubmit=async e=>{e.preventDefault();$('nmsg').textContent='Saving…';const r=await fetch('/api/network',{method:'POST',body:new URLSearchParams(new FormData($('nf')))}).catch(()=>null);
+ $('nmsg').textContent=r?await r.text():'Sent; the board is restarting with the new address.'};
+async function debugToggle(){const r=await fetch('/api/debug',{method:'POST',body:new URLSearchParams({on:$('dtoggle').dataset.on=='1'?'0':'1'})});$('dmsg').textContent=await r.text();formFilled=false}
+async function debugClear(){if(confirm('Clear the debug log?')){await fetch('/api/debug',{method:'POST',body:new URLSearchParams({clear:'1'})});$('dmsg').textContent='Cleared.'}}
+async function hardware(){const h=await (await fetch('/api/hardware')).json();const c=h.config;applyLook(c.web);
  $('hwsum').textContent='Board '+c.board+' · display '+h.display+' · layout '+c.layout+' · '+(c.sensors.length?c.sensors.map(s=>s.type).join(', '):'no sensors')+(h.safeMode?' · SAFE MODE (stored config ignored)':'')+' · config '+h.hash;
  $('pins').innerHTML=h.pins.map(p=>`<tr><td>${esc(p.what)}</td><td class="mono">GPIO${p.gpio}</td></tr>`).join('');$('hwjson').textContent=JSON.stringify(c,null,1)}
 status();loadLog();hardware();setInterval(status,1000);setInterval(loadLog,15000);

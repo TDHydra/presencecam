@@ -1,0 +1,54 @@
+{
+  "id": "xiao-esp32c3",
+  "name": "Seeed Studio XIAO ESP32C3",
+  "short": "XIAO ESP32C3",
+  "chip": "ESP32-C3",
+  "notes": "Native USB (USB Serial/JTAG on GPIO18/19), so D6/D7 (UART0, GPIO21/20) are free for a sensor; the ROM prints a boot message on D6 at power-up. The C3 has only one free UART (UART1), so a UART sensor must use uart 1. Drawn from the component side with the USB-C port at the bottom, which is upside down compared to Seeed's pinout picture (USB at the top there): D0 is at the bottom right and 5V at the bottom left. Pins are labelled D0-D10 on the board. There is no user LED (only the charge LED). GPIO2 (D0) and GPIO8 (D8) are strapping pins: harmless for normal boot, but GPIO8 must not be held low when entering the bootloader, so they are last in the list. Comes with an external U.FL antenna that must be fitted.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "D7", "gpio": 20 },
+      { "label": "D8", "gpio": 8 },
+      { "label": "D9", "gpio": 9 },
+      { "label": "D10", "gpio": 10 },
+      { "label": "3V3", "power": "3v3" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "5V", "power": "5v" }
+    ],
+    "right": [
+      { "label": "D6", "gpio": 21 },
+      { "label": "D5", "gpio": 7 },
+      { "label": "D4", "gpio": 6 },
+      { "label": "D3", "gpio": 5 },
+      { "label": "D2", "gpio": 4 },
+      { "label": "D1", "gpio": 3 },
+      { "label": "D0", "gpio": 2 }
+    ]
+  },
+  "forbidden": {
+    "12": "flash (in package)",
+    "13": "flash (in package)",
+    "14": "flash (in package)",
+    "15": "flash (in package)",
+    "16": "flash (in package)",
+    "17": "flash (in package)",
+    "18": "USB D-",
+    "19": "USB D+"
+  },
+  "reserved": {
+    "9": "BOOT button (D9)"
+  },
+  "i2c": {
+    "sda": 6,
+    "scl": 7
+  },
+  "uarts": [
+    { "num": 1, "rx": 20, "tx": 21 }
+  ],
+  "digitalPrefer": [3, 4, 5, 10, 20, 21, 6, 7, 2, 8],
+  "button": 9,
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

@@ -62,7 +62,7 @@
   ],
   "digitalPrefer": [16, 2, 3, 18, 17, 44, 43],
   "button": 0,
-  "powerHold": 41,
+  "bootOutputs": [{ "gpio": 41, "level": 1, "what": "power hold" }],
   "displays": [
     "builtin",
     "ssd1306",

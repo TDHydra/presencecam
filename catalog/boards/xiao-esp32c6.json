@@ -1,0 +1,67 @@
+{
+  "id": "xiao-esp32c6",
+  "name": "Seeed Studio XIAO ESP32C6",
+  "short": "XIAO ESP32C6",
+  "chip": "ESP32-C6",
+  "notes": "Native USB (USB Serial/JTAG on GPIO12/13), so D6/D7 (UART0, GPIO16/17) are free for a sensor; the ROM prints a boot message on D6 at power-up. Only UART1 is free, so a UART sensor must use uart 1. Drawn from the component side with the USB-C port at the bottom, which is upside down compared to Seeed's pinout picture (USB at the top there): D0 is at the bottom right and 5V at the bottom left. Pins are labelled D0-D10 on the board. The antenna is chosen by an RF switch: GPIO3 low powers it and GPIO14 low selects the built-in ceramic antenna (high = U.FL connector), so the firmware drives both low at boot. The yellow user LED on GPIO15 is active low (3V3 - 1.5k - LED - GPIO15). D0-D2 (GPIO0-2) are LP GPIOs. None of the header pins is a strapping pin.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "D7", "gpio": 17 },
+      { "label": "D8", "gpio": 19 },
+      { "label": "D9", "gpio": 20 },
+      { "label": "D10", "gpio": 18 },
+      { "label": "3V3", "power": "3v3" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "5V", "power": "5v" }
+    ],
+    "right": [
+      { "label": "D6", "gpio": 16 },
+      { "label": "D5", "gpio": 23 },
+      { "label": "D4", "gpio": 22 },
+      { "label": "D3", "gpio": 21 },
+      { "label": "D2", "gpio": 2 },
+      { "label": "D1", "gpio": 1 },
+      { "label": "D0", "gpio": 0 }
+    ]
+  },
+  "forbidden": {
+    "12": "USB D-",
+    "13": "USB D+",
+    "24": "flash (in package)",
+    "25": "flash (in package)",
+    "26": "flash (in package)",
+    "27": "flash (in package)",
+    "28": "flash (in package)",
+    "29": "flash (in package)",
+    "30": "flash (in package)"
+  },
+  "reserved": {
+    "3": "RF switch power (low = on)",
+    "4": "strapping pin",
+    "5": "strapping pin",
+    "8": "strapping pin",
+    "9": "BOOT button",
+    "14": "antenna select (low = built-in)",
+    "15": "user LED (also a strapping pin)"
+  },
+  "i2c": {
+    "sda": 22,
+    "scl": 23
+  },
+  "uarts": [
+    { "num": 1, "rx": 17, "tx": 16 }
+  ],
+  "digitalPrefer": [0, 1, 2, 21, 18, 19, 20, 16, 17, 22, 23],
+  "led": 15,
+  "ledType": "gpio_low",
+  "button": 9,
+  "bootOutputs": [
+    { "gpio": 3, "level": 0, "what": "RF switch on" },
+    { "gpio": 14, "level": 0, "what": "built-in antenna" }
+  ],
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

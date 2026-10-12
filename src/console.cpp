@@ -1,13 +1,17 @@
 #include "console.h"
+#include "debuglog.h"
 
 #include <Preferences.h>
 
 #include "config.h"
 #include "display.h"
 #include "eventlog.h"
+#include "health.h"
+#include "storage.h"
 #include "net.h"
 #include "power.h"
 #include "presence.h"
+#include "rules.h"
 #include "hwconfig.h"
 #include "sensors/sensor.h"
 #include "settings.h"
@@ -19,11 +23,14 @@ static const char* HELP =
     "Commands:\n"
     "  status            firmware, sensors, presence, Wi-Fi, display, log\n"
     "  sensors [s]       live sensor readings for s seconds (default 10)\n"
+    "  rules             the rules (set them on the web page) and how often they fired\n"
     "  config            show the hardware config (JSON) and its pins\n"
     "  config set {...}  replace the hardware config (the web flasher does this), then restart\n"
-    "  config reset      back to this chip's built-in default, then restart\n"
+    "  config reset      back to the setup this firmware was made with (or the chip default), then restart\n"
     "  log [n]           last n log lines (default 10)\n"
     "  verify            check the log chain\n"
+    "  health            what is wrong right now and how to fix it\n"
+    "  debug on|off|show|clear   debug mode: the console, plus status every 30 s, saved to storage\n"
     "  join SSID PASS    join a network (use the web flasher or web page if the name has spaces)\n"
     "  forget            forget the saved Wi-Fi network\n"
     "  setup             open the setup network for 10 minutes\n"
@@ -36,7 +43,7 @@ static const char* HELP =
     "  factory YES       erase settings, Wi-Fi, hardware config and the log (new signing key)\n";
 
 void printBanner(const char* resetReason) {
-  Serial.printf("\nPresenceCam fw %s %s | %s | board %s | reset=%s | display %s | %d sensor(s)%s\n", FW_VERSION, FW_CHIP,
+  Serial.printf("\nPresenceCam fw %s %s " FW_CORE " | %s | board %s | reset=%s | display %s | %d sensor(s)%s\n", FW_VERSION, FW_CHIP,
                 settings.name.c_str(), hwBoardName(), resetReason, displayDescribe().c_str(), sensorsCount(),
                 hwSafeMode ? " | SAFE MODE" : "");
   Serial.println("Type help + Enter for commands.");
@@ -50,7 +57,7 @@ static void printReading(Sensor& s, const Reading& r, void*) {
 
 static void status() {
   const Presence& p = presence();
-  Serial.printf("  firmware  %s %s, %s, up %lus, heap %u KB free\n", FW_VERSION, FW_CHIP, settings.name.c_str(),
+  Serial.printf("  firmware  %s %s " FW_CORE ", %s, up %lus, heap %u KB free\n", FW_VERSION, FW_CHIP, settings.name.c_str(),
                 millis() / 1000, ESP.getFreeHeap() / 1024);
   Serial.printf("  hardware  board %s, config %08lx%s\n", hwBoardName(), (unsigned long)hwHash(),
                 hwSafeMode ? ", SAFE MODE" : "");
@@ -63,7 +70,7 @@ static void status() {
   Serial.printf("  display   %s, layout %s\n", displayDescribe().c_str(), (const char*)(hw["layout"] | "basic"));
   Serial.printf("  settings  hold %us, max %ucm, screen sleep %us%s\n", settings.holdSeconds, settings.maxCm,
                 settings.screenSleepS, settings.screenFlip ? ", flipped" : "");
-  if (NET_WIRED)
+  if (netWired())
     Serial.printf("  network   %s\n", netConnected() ? (netLink() + ", " + netUrl() + ", http://" + netHostname() + ".local").c_str()
                                                      : "Ethernet, no cable or no DHCP answer yet");
   else if (netConnected())
@@ -125,12 +132,28 @@ static void run(String cmd) {
   } else if (word == "log") {
     size_t n = arg.length() ? arg.toInt() : 10;
     logTail(n, [](const String& l, void*) { Serial.println("  " + l); }, nullptr);
+  } else if (word == "health") {
+    Problem list[12];
+    int n = healthProblems(list, 12);
+    if (!n) Serial.println("  all good");
+    for (int i = 0; i < n; i++) Serial.println("  " + list[i].what + "\n    " + list[i].fix);
+    Serial.println("  storage: " + storageDescribe());
+  } else if (word == "debug") {
+    if (arg == "on" || arg == "off") debugSetEnabled(arg == "on");
+    else if (arg == "clear") debugClear();
+    else if (arg == "show") {
+      if (!debugSendLog(Serial)) Serial.println("  (no debug log yet)");
+      return;
+    }
+    Serial.printf("  debug mode %s, log %u bytes\n", debugEnabled() ? "on" : "off", (unsigned)debugLogBytes());
   } else if (word == "verify") {
     VerifyResult v = logVerify();
     Serial.printf("  %lu line(s) checked (%lu-%lu)%s: %s\n", (unsigned long)v.lines, (unsigned long)v.first,
                   (unsigned long)v.last, v.startsMidChain ? ", older lines rotated out" : "",
                   v.issues ? "PROBLEMS" : "OK");
     if (v.report.length()) Serial.print(v.report);
+  } else if (word == "rules") {
+    Serial.print(rulesStatus());
   } else if (word == "wifi") {
     status();
   } else if (word == "join") {

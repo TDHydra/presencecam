@@ -1,4 +1,5 @@
 #include "buttons.h"
+#include "debuglog.h"
 
 #include <Preferences.h>
 #include <esp_system.h>

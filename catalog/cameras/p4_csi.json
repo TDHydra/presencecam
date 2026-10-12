@@ -1,0 +1,14 @@
+{
+  "id": "p4_csi",
+  "name": "ESP32-P4 MIPI-CSI camera (OV5647 / SC2336 module)",
+  "short": "P4 CSI camera",
+  "chips": ["ESP32-P4"],
+  "bus": "builtin",
+  "boards": ["waveshare-p4-eth", "waveshare-p4-module-devkit"],
+  "description": "A camera module on the board's MIPI-CSI ribbon connector (Waveshare OV5647 or SC2336 modules, 2-lane). The sensor is detected at boot; its control bus is the board's I2C on GPIO7/8, shared with any I2C display or sensor. Photos are scaled to at most 640 wide and stored as JPEG, the newest 20 kept in flash.",
+  "pins": [],
+  "options": [
+    {"key": "sensor", "label": "Module", "values": ["auto", "ov5647", "sc2336"], "default": "auto"}
+  ],
+  "config": {"type": "p4_csi", "sensor": "auto", "sda": 7, "scl": 8}
+}

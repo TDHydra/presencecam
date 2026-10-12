@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { allocate, configPins } from "../allocator.mjs";
+import { allocate, configPins, defaultSelection } from "../allocator.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const load = (dir) =>
@@ -13,20 +13,28 @@ const load = (dir) =>
     .filter((f) => f.endsWith(".json"))
     .sort()
     .map((f) => JSON.parse(readFileSync(join(root, "catalog", dir, f), "utf8")));
-const catalog = { boards: load("boards"), sensors: load("sensors"), displays: load("displays"), layouts: load("layouts") };
+const catalog = { boards: load("boards"), sensors: load("sensors"), displays: load("displays"), layouts: load("layouts"), cameras: load("cameras") };
 
 // The firmware's built-in defaults, read straight out of src/hwconfig.cpp
 function firmwareDefaults() {
   const src = readFileSync(join(root, "src", "hwconfig.cpp"), "utf8");
-  const block = src.slice(src.indexOf("#if CONFIG_IDF_TARGET_ESP32P4"), src.indexOf("#endif"));
-  const [p4, s3, esp32] = block
-    .split(/#elif .*|#else/)
-    .map((part) => JSON.parse([...part.matchAll(/R"\((.*?)\)"/g)].map((m) => m[1]).join("")));
-  return { p4, s3, esp32 };
+  // #if CONFIG_IDF_TARGET_ESP32P4 ... #elif CONFIG_IDF_TARGET_ESP32S3 ... #else (plain ESP32) ... #endif
+  const start = src.indexOf("#if CONFIG_IDF_TARGET_");
+  const block = src.slice(start, src.indexOf("#endif", start));
+  const out = {};
+  for (const m of block.matchAll(/#(?:if|elif) CONFIG_IDF_TARGET_(\w+)([\s\S]*?)(?=#elif|#else|$)|#else([\s\S]*)/g)) {
+    const chip = m[1] ? m[1].toLowerCase() : "esp32";
+    out[chip] = JSON.parse([...(m[2] ?? m[3]).matchAll(/R"\((.*?)\)"/g)].map((x) => x[1]).join(""));
+  }
+  return out;
 }
 
 const sensorSets = [
   [],
+  [{ id: "hcsr501" }],
+  [{ id: "vl53l1x" }],
+  [{ id: "hcsr04" }],
+  [{ id: "ld2410" }, { id: "hcsr501" }],
   [{ id: "ld2410" }],
   [{ id: "ld2410", groups: { uart: false } }],
   [{ id: "ld2410", groups: { out: false } }],
@@ -40,8 +48,11 @@ test("every board, display and sensor set allocates without conflicts", () => {
       for (const sensors of sensorSets) {
         const label = `${board.id} / ${display} / ${sensors.map((s) => s.id).join("+") || "no sensors"}`;
         const r = allocate(catalog, { board: board.id, display, layout: "basic", sensors });
-        assert.deepEqual(r.errors, [], label);
-        const pins = configPins(r.config);
+        // Small boards may run out of pins for the bigger sets; that must be reported, not mis-wired
+        const outOfPins = (e) => /no free (GPIO|hardware UART) left/.test(e);
+        assert.deepEqual(r.errors.filter((e) => !outOfPins(e)), [], label);
+        if (r.errors.length && display === "none" && sensors.length < 2) assert.fail(`${label}: ${r.errors.join("; ")}`);
+        const pins = configPins(r.config).filter((p) => p.gpio >= 0);
         const seen = new Map();
         for (const p of pins) {
           // I2C pins are shared by design; nothing else may repeat
@@ -53,7 +64,7 @@ test("every board, display and sensor set allocates without conflicts", () => {
         for (const part of r.parts)
           for (const pin of part.pins) {
             if (pin.to.power) assert.ok(pin.to.label, `${label}: ${part.name} ${pin.label} has no power pin`);
-            else
+            else if (pin.to.gpio >= 0)
               assert.ok(
                 Object.values(board.headers).flat().some((h) => h.gpio === pin.to.gpio),
                 `${label}: ${part.name} ${pin.label} -> GPIO${pin.to.gpio} isn't on a header`,
@@ -71,12 +82,51 @@ test("NodeMCU 30-pin + OLED + LD2410 matches the firmware's ESP32 default", () =
 
 test("Waveshare 1.47B with its LCD and no sensors matches the firmware's ESP32-S3 default", () => {
   const r = allocate(catalog, { board: "waveshare-s3-lcd-147b", display: "builtin", layout: "basic", sensors: [] });
-  assert.deepEqual(r.config, firmwareDefaults().s3);
+  assert.deepEqual(r.config, firmwareDefaults().esp32s3);
 });
 
 test("Waveshare ESP32-P4-ETH with nothing attached matches the firmware's ESP32-P4 default", () => {
   const r = allocate(catalog, { board: "waveshare-p4-eth", display: "none", layout: "basic", sensors: [] });
-  assert.deepEqual(r.config, firmwareDefaults().p4);
+  assert.deepEqual(r.config, firmwareDefaults().esp32p4);
+});
+
+test("XIAO ESP32-C3 and C6 with nothing attached match the firmware's defaults", () => {
+  for (const [board, chip] of [["xiao-esp32c3", "esp32c3"], ["xiao-esp32c6", "esp32c6"]]) {
+    const r = allocate(catalog, { board, display: "none", layout: "basic", sensors: [] });
+    assert.deepEqual(r.config, firmwareDefaults()[chip], board);
+  }
+});
+
+test("two parts at one I2C address are refused", () => {
+  const r = allocate(catalog, { board: "esp32-devkit-30", display: "ssd1306", layout: "basic", sensors: [{ id: "vl53l0x" }, { id: "vl53l1x" }] });
+  assert.ok(r.errors.some((e) => e.includes("0x29")), r.errors.join("; "));
+});
+
+test("the HC-SR501 gets a plain input pin", () => {
+  const r = allocate(catalog, { board: "esp32-devkit-30", display: "none", layout: "basic", sensors: [{ id: "hcsr501" }] });
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.config.sensors[0].type, "hcsr501");
+  assert.ok(r.config.sensors[0].out >= 0);
+});
+
+test("boards with Ethernet and Wi-Fi use Ethernet unless Wi-Fi is picked", () => {
+  const sel = { board: "waveshare-s3-eth", display: "none", layout: "basic", sensors: [] };
+  assert.equal(allocate(catalog, sel).config.eth.type, "w5500");
+  assert.equal(allocate(catalog, { ...sel, network: "wifi" }).config.eth, undefined);
+  // the ESP32-P4-ETH has no Wi-Fi, so it keeps Ethernet whatever is picked
+  assert.equal(allocate(catalog, { ...sel, board: "waveshare-p4-eth", network: "wifi" }).config.eth.type, "ip101");
+});
+
+test("cameras: SPI one gets pins and wires, built-in ones only where they belong", () => {
+  const spi = allocate(catalog, { board: "esp32-devkit-30", display: "ssd1306", layout: "basic", sensors: [{ id: "ld2410" }], camera: "arducam_mega" });
+  assert.deepEqual(spi.errors, []);
+  for (const k of ["cs", "sck", "mosi", "miso"]) assert.ok(spi.config.camera[k] >= 0, k);
+  assert.ok(spi.parts.some((p) => p.id === "arducam_mega"));
+  const cam = allocate(catalog, { board: "ai-thinker-esp32-cam", display: "none", layout: "basic", sensors: [], camera: "esp32cam" });
+  assert.deepEqual(cam.errors, []);
+  assert.equal(cam.config.camera.type, "esp32cam");
+  const wrong = allocate(catalog, { board: "esp32-devkit-30", display: "none", layout: "basic", sensors: [], camera: "esp32cam" });
+  assert.ok(wrong.errors.length);
 });
 
 test("the LD2410 needs 5 V and the OLED 3.3 V", () => {
@@ -97,4 +147,16 @@ test("running out of UARTs is reported, not silently mis-wired", () => {
 test("an unknown sensor is an error", () => {
   const r = allocate(catalog, { board: "esp32-devkit-30", display: "none", layout: "basic", sensors: [{ id: "bogus" }] });
   assert.ok(r.errors.length);
+});
+
+test("show and web choices go into the config, defaults left out", () => {
+  const sel = defaultSelection(catalog, "esp32-devkit-30");
+  sel.sensors = [{ id: "ld2410", show: { Distance: "web", Still: "off", Radar: "both", Bogus: "web" } }];
+  sel.web = { title: "  Hall  ", theme: "auto", accent: "#AABBCC", style: "big", hide: ["log"], admin: "collapsed" };
+  const { config, errors } = allocate(catalog, sel);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(config.sensors[0].show, { Distance: "web", Still: "off" });
+  assert.deepEqual(config.web, { title: "Hall", accent: "#aabbcc", style: "big", hide: ["log"], admin: "collapsed" });
+  sel.web = { theme: "auto", style: "cards" };
+  assert.equal(allocate(catalog, sel).config.web, undefined);
 });

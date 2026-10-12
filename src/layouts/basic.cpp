@@ -30,7 +30,7 @@ void collect() {
     bool p = presence().present;
     rows[rowCount++] = {"Presence", p ? "PRESENT" : "clear", "", -1, p, true};
   }
-  sensorsForEachReading([](Sensor&, const Reading& r, void*) {
+  sensorsForEachShown(true, [](Sensor&, const Reading& r, void*) {
     if (rowCount >= MAX_ROWS) return;
     float frac = r.max > 0 && r.valid ? r.value / r.max : (r.max > 0 ? 0 : -1);
     rows[rowCount++] = {r.label, fmt(r), r.valid && !r.boolean ? r.unit : "", frac, false, r.valid};

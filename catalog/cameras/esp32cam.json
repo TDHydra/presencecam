@@ -1,0 +1,11 @@
+{
+  "id": "esp32cam",
+  "name": "ESP32-CAM built-in OV2640",
+  "short": "ESP32-CAM camera",
+  "chips": ["ESP32"],
+  "bus": "builtin",
+  "boards": ["ai-thinker-esp32-cam"],
+  "description": "The OV2640 that comes on the AI-Thinker ESP32-CAM, on its fixed pins. Nothing to wire. Photos are 320x240 JPEGs, the newest 3 kept in flash (the 4 MB flash leaves little room next to the event log).",
+  "pins": [],
+  "config": {"type": "esp32cam"}
+}

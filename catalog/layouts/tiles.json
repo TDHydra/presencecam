@@ -1,0 +1,5 @@
+{
+  "id": "tiles",
+  "name": "Tiles",
+  "description": "A dashboard grid: every reading in its own tile, presence highlighted. Fits the most on one screen."
+}

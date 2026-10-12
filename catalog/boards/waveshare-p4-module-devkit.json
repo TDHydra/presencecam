@@ -1,0 +1,266 @@
+{
+  "id": "waveshare-p4-module-devkit",
+  "name": "Waveshare ESP32-P4-Module-DEV-KIT",
+  "short": "ESP32-P4-Module-DEV-KIT",
+  "chip": "ESP32-P4",
+  "notes": "Raspberry-Pi-sized board with an ESP32-P4-Module (ESP32-P4NRW32: 32 MB in-package PSRAM, 16 MB flash, plus an ESP32-C6 for Wi-Fi 6/BLE over ESP-Hosted SDIO) and 100M Ethernet (IP101, PoE module header). Flash and use the console through the Type-C port marked USB TO UART (CH343P bridge on UART0 GPIO37/38, auto-reset via DTR/RTS). The other Type-C port, marked USB, is the P4's USB 1.1 Serial/JTAG on GPIO24/25. The 40-pin header is one 2x20 Pi-style block on the board edge, not two side rows. Here left = outer row (board edge: 5V, 5V, GND, TXD...), right = inner row (3V3, SDA, SCL...), listed from the RJ45/USB-A end down to the button end. That is Waveshare's board photo orientation; the header pinout picture is drawn rotated 180 degrees. The Type-C ports are on the long side, near the bottom in this orientation. GPIO54 (header pin 32) is the C6's CHIP_PU/reset and GPIO6 (pin 16) is wired to C6 GPIO2 inside the module, so neither is free. GPIO0/1 carry a 32.768 kHz crystal inside the module. GPIO45 (pin 39) switches the microSD power (low = on), and GPIO53 (pin 34) enables the speaker amplifier. GPIO39-48 are powered by the P4's internal LDO VO4. GPIO32/33 have 2.2k pull-ups (the I3C SH1.0 connector). There is no user LED, only a power LED. The BOOT button is GPIO35, which is also Ethernet TXD1, so there is no page button.",
+  "positionsVerified": false,
+  "headers": {
+    "left": [
+      {
+        "label": "45",
+        "gpio": 45
+      },
+      {
+        "label": "27",
+        "gpio": 27
+      },
+      {
+        "label": "46",
+        "gpio": 46
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "54",
+        "gpio": 54
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "25",
+        "gpio": 25
+      },
+      {
+        "label": "32",
+        "gpio": 32
+      },
+      {
+        "label": "36",
+        "gpio": 36
+      },
+      {
+        "label": "1",
+        "gpio": 1
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "4",
+        "gpio": 4
+      },
+      {
+        "label": "5",
+        "gpio": 5
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "22",
+        "gpio": 22
+      },
+      {
+        "label": "RXD/38",
+        "gpio": 38
+      },
+      {
+        "label": "TXD/37",
+        "gpio": 37
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "5V",
+        "power": "5v"
+      },
+      {
+        "label": "5V",
+        "power": "5v"
+      }
+    ],
+    "right": [
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "47",
+        "gpio": 47
+      },
+      {
+        "label": "53",
+        "gpio": 53
+      },
+      {
+        "label": "48",
+        "gpio": 48
+      },
+      {
+        "label": "26",
+        "gpio": 26
+      },
+      {
+        "label": "33",
+        "gpio": 33
+      },
+      {
+        "label": "24",
+        "gpio": 24
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "0",
+        "gpio": 0
+      },
+      {
+        "label": "2",
+        "gpio": 2
+      },
+      {
+        "label": "3",
+        "gpio": 3
+      },
+      {
+        "label": "3V3",
+        "power": "3v3"
+      },
+      {
+        "label": "6",
+        "gpio": 6
+      },
+      {
+        "label": "20",
+        "gpio": 20
+      },
+      {
+        "label": "21",
+        "gpio": 21
+      },
+      {
+        "label": "GND",
+        "power": "gnd"
+      },
+      {
+        "label": "23",
+        "gpio": 23
+      },
+      {
+        "label": "SCL/8",
+        "gpio": 8
+      },
+      {
+        "label": "SDA/7",
+        "gpio": 7
+      },
+      {
+        "label": "3V3",
+        "power": "3v3"
+      }
+    ]
+  },
+  "forbidden": {
+    "28": "Ethernet",
+    "29": "Ethernet",
+    "30": "Ethernet",
+    "31": "Ethernet",
+    "34": "Ethernet",
+    "35": "Ethernet and BOOT button",
+    "37": "USB serial TX",
+    "38": "USB serial RX",
+    "49": "Ethernet",
+    "50": "Ethernet",
+    "51": "Ethernet",
+    "52": "Ethernet"
+  },
+  "reserved": {
+    "0": "32 kHz crystal",
+    "1": "32 kHz crystal",
+    "6": "ESP32-C6 GPIO2",
+    "9": "audio codec",
+    "10": "audio codec",
+    "11": "audio codec",
+    "12": "audio codec",
+    "13": "audio codec",
+    "14": "ESP32-C6 SDIO D0 (Wi-Fi)",
+    "15": "ESP32-C6 SDIO D1 (Wi-Fi)",
+    "16": "ESP32-C6 SDIO D2 (Wi-Fi)",
+    "17": "ESP32-C6 SDIO D3 (Wi-Fi)",
+    "18": "ESP32-C6 SDIO CLK (Wi-Fi)",
+    "19": "ESP32-C6 SDIO CMD (Wi-Fi)",
+    "24": "USB 1.1 Type-C D- (also on header)",
+    "25": "USB 1.1 Type-C D+ (also on header)",
+    "39": "SD card",
+    "40": "SD card",
+    "41": "SD card",
+    "42": "SD card",
+    "43": "SD card",
+    "44": "SD card",
+    "45": "SD card power",
+    "53": "speaker amplifier",
+    "54": "ESP32-C6 reset (Wi-Fi)"
+  },
+  "i2c": {
+    "sda": 7,
+    "scl": 8
+  },
+  "uarts": [
+    {
+      "num": 1,
+      "rx": 2,
+      "tx": 3
+    },
+    {
+      "num": 2,
+      "rx": 4,
+      "tx": 5
+    }
+  ],
+  "digitalPrefer": [
+    20,
+    21,
+    22,
+    23,
+    26,
+    27,
+    36,
+    32,
+    33,
+    46,
+    47,
+    48
+  ],
+  "button": -1,
+  "ethernet": {
+    "type": "ip101",
+    "phyAddr": 1,
+    "mdc": 31,
+    "mdio": 52,
+    "power": 51
+  },
+  "wifiHosted": {
+    "clk": 18,
+    "cmd": 19,
+    "d0": 14,
+    "d1": 15,
+    "d2": 16,
+    "d3": 17,
+    "rst": 54
+  },
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

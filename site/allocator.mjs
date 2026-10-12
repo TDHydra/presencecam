@@ -7,6 +7,11 @@
 //   display: "ssd1306",                 // a display id from board.displays
 //   layout: "basic",
 //   sensors: [{id: "ld2410", groups: {uart: true, out: true}, options: {}}, {id: "vl53l0x", options: {presenceMm: 0}}],
+//   network: "eth" | "wifi",           // only for boards with both (see hasWifi); Ethernet by default
+//   camera: "arducam_mega" | "none",   // a camera id from catalog.cameras offered for this board
+//   (each sensor may also have show: {"Distance": "web" | "screen" | "both" | "off", ...})
+//   web: {title, theme: "auto"|"dark"|"light", accent: "#rrggbb", style: "cards"|"list"|"big",
+//         hide: ["log", "rules", "photos", "hardware", "health", "debug"], admin: "open"|"collapsed"},
 // }
 //
 // Returns { config, parts, errors, warnings }:
@@ -28,6 +33,17 @@ function headerIndex(board) {
     });
   }
   return { byGpio, power };
+}
+
+// Whether a board can use Wi-Fi: every chip has it built in except the ESP32-P4, which needs a
+// co-processor (ESP32-C6 over ESP-Hosted).
+export function hasWifi(board) {
+  return board.chip !== "ESP32-P4" || !!board.wifiHosted;
+}
+
+// Cameras offered for a board: built-in ones list their boards, wired ones their chips
+export function camerasFor(catalog, board) {
+  return (catalog.cameras || []).filter((c) => (c.bus === "builtin" ? (c.boards || []).includes(board.id) : (c.chips || []).includes(board.chip)));
 }
 
 export function defaultSelection(catalog, boardId) {
@@ -87,10 +103,13 @@ export function allocate(catalog, sel) {
   const config = {
     v: 1,
     board: board.id,
+    chip: board.chip,
     led: board.led ?? -1,
     ...(board.ledType && board.ledType !== "gpio" ? { ledType: board.ledType } : {}),
     button: board.button ?? 0,
-    ...(board.powerHold != null ? { hold: board.powerHold } : {}),
+    ...(board.bootOutputs?.length ? { outputs: board.bootOutputs.map(({ gpio, level }) => ({ gpio, level })) } : {}),
+    ...(board.ethernet && (sel.network !== "wifi" || !hasWifi(board)) ? { eth: { ...board.ethernet } } : {}),
+    ...(board.wifiHosted ? { wifiHosted: { ...board.wifiHosted } } : {}),
     i2c: i2c || { sda: -1, scl: -1 },
     display: { type: "none" },
     layout: findById(catalog.layouts, sel.layout) ? sel.layout : catalog.layouts[0].id,
@@ -158,7 +177,14 @@ export function allocate(catalog, sel) {
     for (const o of def.options || []) cfg[o.key] = Number(s.options?.[o.key] ?? o.default);
     const pinsFor = {};
 
-    if (def.bus === "uart") {
+    if (def.bus === "gpio") {
+      for (const p of def.pins)
+        if (p.role === "digital_in" || p.role === "digital_out") {
+          const g = nextDigital(`${what} ${p.label}`);
+          cfg[p.key] = g;
+          pinsFor[p.key] = g;
+        }
+    } else if (def.bus === "uart") {
       if (groups.uart !== false) {
         const u = uartsLeft.find((u) => !used.has(u.rx) && !used.has(u.tx));
         if (!u) {
@@ -182,9 +208,64 @@ export function allocate(catalog, sel) {
       }
       if (groups.uart === false && groups.out === false) errors.push(`${what}: wire TX/RX, OUT, or both`);
     }
+    // Where each reading shows; "both" is the firmware's default, so only the others are stored
+    const show = Object.fromEntries(Object.entries(s.show || {}).filter(([k, w]) => w !== "both" && (def.readings || []).some((r) => r.key === k)));
+    if (Object.keys(show).length) cfg.show = show;
     config.sensors.push(cfg);
     wireModule(def, what, pinsFor, (g) => groups[g] !== false);
   });
+
+  // Two I2C parts at one address can't share the bus
+  const i2cAt = new Map();
+  const i2cParts = [
+    ...(display.bus === "i2c" ? [{ name: display.short || display.name, addr: display.config?.addr }] : []),
+    ...sensors.filter((s) => s.def.bus === "i2c").map((s) => ({ name: s.def.short || s.def.name, addr: parseInt(s.def.address) })),
+  ];
+  for (const { name, addr } of i2cParts) {
+    if (!addr) continue;
+    if (i2cAt.has(addr)) errors.push(`${i2cAt.get(addr)} and ${name} both use I²C address 0x${addr.toString(16)}; fit only one of them`);
+    else i2cAt.set(addr, name);
+  }
+
+  // Camera
+  const camera = sel.camera && sel.camera !== "none" ? findById(catalog.cameras || [], sel.camera) : null;
+  if (camera) {
+    if (!camerasFor(catalog, board).some((c) => c.id === camera.id)) errors.push(`${camera.name} isn't offered for ${board.name}`);
+    config.camera = { ...camera.config };
+    if (camera.bus === "spi") {
+      // The board's SPI pins if it names them, otherwise any free pins
+      const spi = board.spi || {};
+      const pinsFor = {};
+      for (const p of camera.pins) {
+        if (!p.key) continue;
+        const want = spi[p.key];
+        const g = want !== undefined && !used.has(want) && !forbidden.has(want) ? (used.set(want, `${camera.short || camera.name} ${p.label}`), want) : nextDigital(`${camera.short || camera.name} ${p.label}`);
+        config.camera[p.key] = g;
+        pinsFor[p.key] = g;
+      }
+      wireModule(camera, camera.short || camera.name, pinsFor);
+    } else if (camera.bus === "i2c") {
+      if (!i2c) {
+        i2c = { ...board.i2c };
+        claim(i2c.sda, "I²C SDA");
+        claim(i2c.scl, "I²C SCL");
+        config.i2c = i2c;
+      }
+      config.camera.sda = i2c.sda;
+      config.camera.scl = i2c.scl;
+    }
+  }
+
+  // The device's web page: only what differs from the firmware's defaults
+  const web = {};
+  const w = sel.web || {};
+  if (w.title?.trim()) web.title = w.title.trim().slice(0, 40);
+  if (w.theme && w.theme !== "auto") web.theme = w.theme;
+  if (/^#[0-9a-f]{6}$/i.test(w.accent || "")) web.accent = w.accent.toLowerCase();
+  if (w.style && w.style !== "cards") web.style = w.style;
+  if (w.hide?.length) web.hide = [...w.hide];
+  if (w.admin === "collapsed") web.admin = "collapsed";
+  if (Object.keys(web).length) config.web = web;
 
   // Power checks
   const fiveVolt = parts.filter((p) => p.pins.some((x) => x.to.power === "5v"));
@@ -202,12 +283,15 @@ export function configPins(config) {
   const add = (what, g) => g >= 0 && out.push({ what, gpio: g });
   add("status LED", config.led);
   add("button", config.button);
-  add("power hold", config.hold ?? -1);
+  for (const o of config.outputs || []) add("boot output", o.gpio);
+  if (config.wifiHosted) for (const k of ["clk", "cmd", "d0", "d1", "d2", "d3", "rst"]) add("Wi-Fi co-processor " + k, config.wifiHosted[k] ?? -1);
+  if (config.camera) for (const k of ["cs", "sck", "mosi", "miso"]) if (config.camera[k] !== undefined) add("camera " + k, config.camera[k]);
+  if (config.eth) for (const k of ["sclk", "mosi", "miso", "cs", "int", "rst"]) add("ethernet " + k, config.eth[k] ?? -1);
   add("I2C SDA", config.i2c.sda);
   add("I2C SCL", config.i2c.scl);
   if (config.display.type === "st7789") for (const k of ["mosi", "sclk", "cs", "dc", "rst", "bl"]) add("display " + k, config.display[k]);
   config.sensors.forEach((s, i) => {
-    for (const k of ["rx", "tx", "out"]) if (s[k] !== undefined) add(`${s.type} #${i + 1} ${k}`, s[k]);
+    for (const k of ["rx", "tx", "out", "trig", "echo"]) if (s[k] !== undefined) add(`${s.type} #${i + 1} ${k}`, s[k]);
   });
   return out;
 }

@@ -1,11 +1,12 @@
 #include "eventlog.h"
+#include "debuglog.h"
 
-#include <LittleFS.h>
 #include <Preferences.h>
 #include <esp_random.h>
 #include <mbedtls/md.h>
 
 #include "config.h"
+#include "storage.h"
 
 static const char* LOG = "/log.txt";
 static const char* OLD = "/log.old.txt";
@@ -47,8 +48,9 @@ static void saveState() {
 }
 
 void logBegin() {
-  fsOk = LittleFS.begin(true);  // formats the partition the first time
-  if (!fsOk) Serial.println("log: LittleFS mount failed, events will not be saved");
+  storageBegin();
+  fsOk = storageTotal() > 0;
+  if (!fsOk) Serial.println("log: no storage mounted, events will not be saved");
   loadState();
 }
 
@@ -64,14 +66,14 @@ void logEvent(const char* event, const String& detail) {
   String line = body + "|" + mac;
 
   if (fsOk) {
-    File f = LittleFS.open(LOG, "a");
+    File f = storageFs().open(LOG, "a");
     if (f) {
       f.println(line);
       size_t size = f.size();
       f.close();
       if (size > LOG_ROTATE_BYTES) {
-        LittleFS.remove(OLD);
-        LittleFS.rename(LOG, OLD);
+        storageFs().remove(OLD);
+        storageFs().rename(LOG, OLD);
       }
     }
   }
@@ -84,7 +86,7 @@ void logEvent(const char* event, const String& detail) {
 void logForEach(void (*cb)(const String&, void*), void* ctx) {
   if (!fsOk) return;
   for (const char* path : {OLD, LOG}) {
-    File f = LittleFS.open(path, "r");
+    File f = storageFs().open(path, "r");
     if (!f) continue;
     while (f.available()) {
       String l = f.readStringUntil('\n');
@@ -159,8 +161,8 @@ VerifyResult logVerify() {
 
 void logClearAll() {
   if (fsOk) {
-    LittleFS.remove(LOG);
-    LittleFS.remove(OLD);
+    storageFs().remove(LOG);
+    storageFs().remove(OLD);
   }
   Preferences p;
   p.begin("pcamlog", false);

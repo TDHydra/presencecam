@@ -16,5 +16,5 @@
   "options": [
     {"key": "presenceMm", "label": "Also count as presence when something is closer than (mm, 0 = off)", "type": "number", "default": 0, "min": 0, "max": 2000}
   ],
-  "readings": ["ToF distance mm"]
+  "readings": [{"key": "ToF", "label": "ToF distance mm"}]
 }

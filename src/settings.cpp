@@ -25,6 +25,12 @@ void settingsLoad() {
   settings.lowPowerLatched = prefs.getBool("lowtx", false);
   settings.wifiSsid = prefs.getString("ssid", "");
   settings.wifiPass = prefs.getString("pass", "");
+  settings.staticIp = prefs.getBool("static", false);
+  settings.ip = prefs.getString("ip", "");
+  settings.mask = prefs.getString("mask", "255.255.255.0");
+  settings.gateway = prefs.getString("gw", "");
+  settings.dns = prefs.getString("dns", "");
+  settings.debug = prefs.getBool("debug", false);
   prefs.end();
 }
 
@@ -39,6 +45,12 @@ void settingsSave() {
   prefs.putBool("lowtx", settings.lowPowerLatched);
   prefs.putString("ssid", settings.wifiSsid);
   prefs.putString("pass", settings.wifiPass);
+  prefs.putBool("static", settings.staticIp);
+  prefs.putString("ip", settings.ip);
+  prefs.putString("mask", settings.mask);
+  prefs.putString("gw", settings.gateway);
+  prefs.putString("dns", settings.dns);
+  prefs.putBool("debug", settings.debug);
   prefs.end();
 }
 

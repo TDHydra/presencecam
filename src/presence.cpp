@@ -11,16 +11,30 @@ static Presence p{false, 0, 0, 0};
 static int today = -1;
 static int ledPin = -1;
 static bool ledRgb = false;
+static bool ledLow = false;  // lit when the pin is low
+static bool overrideActive = false, overrideOn = false;
 
 static void setLed(bool on) {
   if (ledPin < 0) return;
-  if (ledRgb) neopixelWrite(ledPin, on ? 40 : 0, on ? 20 : 0, 0);  // amber while present
-  else digitalWrite(ledPin, on);
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  if (ledRgb) rgbLedWrite(ledPin, on ? 40 : 0, on ? 20 : 0, 0);  // amber while present
+#else
+  if (ledRgb) neopixelWrite(ledPin, on ? 40 : 0, on ? 20 : 0, 0);
+#endif
+  else digitalWrite(ledPin, on != ledLow);
+}
+
+void presenceLedOverride(bool active, bool on) {
+  if (active == overrideActive && on == overrideOn) return;
+  overrideActive = active;
+  overrideOn = on;
+  setLed(active ? on : p.present);
 }
 
 void presenceBegin() {
   ledPin = hwPin(hw.as<JsonVariantConst>(), "led");
   ledRgb = hw["ledType"] == "ws2812";
+  ledLow = hw["ledType"] == "gpio_low";
   if (ledPin >= 0 && !ledRgb) pinMode(ledPin, OUTPUT);
   setLed(false);
 }
@@ -49,7 +63,7 @@ void presenceLoop() {
   uint32_t lasted = (now - p.sinceMs) / 1000;
   p.present = want;
   p.sinceMs = now;
-  setLed(want);
+  if (!overrideActive) setLed(want);
 
   if (want) {
     countVisit();
