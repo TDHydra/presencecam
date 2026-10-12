@@ -19,6 +19,7 @@ never reads them: it gets the finished hardware config (see `src/hwconfig.h`).
 | `led`, `ledType`, `button` | Status LED (`gpio`, `gpio_low` for active-low, or `ws2812`) and the BOOT button (`-1` for none) |
 | `bootOutputs` | `[{"gpio": 41, "level": 1, "what": "power hold"}]`: pins the firmware drives at boot (battery power hold, RF switch) |
 | `ethernet` | Use Ethernet instead of Wi-Fi: `{"type": "w5500", "sclk", "mosi", "miso", "cs", "int", "rst", "spiMhz"}` or `{"type": "ip101", "phyAddr", "mdc", "mdio", "power"}` (ESP32-P4) |
+| `sd` | microSD slot, offered as a choice: `{"config": {…the firmware's hw["sd"], see src/storage.h…}, "default": true/false, "note": "…"}`. Its pins are claimed when the card is on (pins whose `reserved` reason mentions "SD card" are fine) |
 | `displays` | Display ids offered on this board, first is the default |
 | `builtinDisplay` | Display config for a screen soldered on the board |
 

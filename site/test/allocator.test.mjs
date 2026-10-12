@@ -160,3 +160,34 @@ test("show and web choices go into the config, defaults left out", () => {
   sel.web = { theme: "auto", style: "cards" };
   assert.equal(allocate(catalog, sel).config.web, undefined);
 });
+
+test("microSD: on by default on the ESP32-P4 boards, a choice on the ESP32-CAM", () => {
+  for (const board of ["waveshare-p4-eth", "waveshare-p4-module-devkit"]) {
+    const sel = defaultSelection(catalog, board);
+    const r = allocate(catalog, sel);
+    assert.deepEqual(r.errors, [], board);
+    assert.equal(r.config.sd.type, "sdmmc");
+    assert.equal(r.config.sd.power, 45);
+    assert.equal(allocate(catalog, { ...sel, storage: "flash" }).config.sd, undefined);
+  }
+  const cam = defaultSelection(catalog, "ai-thinker-esp32-cam");
+  assert.equal(allocate(catalog, cam).config.sd, undefined);
+  const withSd = allocate(catalog, { ...cam, display: "none", storage: "sd" });
+  assert.deepEqual(withSd.errors, []);
+  assert.deepEqual({ ...withSd.config.sd }, { type: "sdmmc", clk: 14, cmd: 15, d0: 2, width: 1 });
+  // the card takes the I2C pins, so an I2C part can't go with it
+  const clash = allocate(catalog, { ...cam, display: "none", storage: "sd", sensors: [{ id: "vl53l0x" }] });
+  assert.match(clash.errors.join(" "), /GPIO1[45] is already used by SD card/);
+  assert.match(clash.errors.join(" "), /Flash only/);
+});
+
+test("microSD on SPI: S3-ETH on its own pins, C6-LCD sharing the LCD's", () => {
+  for (const board of ["waveshare-s3-eth", "waveshare-c6-lcd-147"]) {
+    const r = allocate(catalog, defaultSelection(catalog, board));
+    assert.deepEqual(r.errors, [], board);
+    assert.deepEqual({ ...r.config.sd }, { type: "spi", cs: 4, miso: 5, mosi: 6, sck: 7 });
+  }
+  const c6 = allocate(catalog, defaultSelection(catalog, "waveshare-c6-lcd-147")).config;
+  assert.equal(c6.display.sclk, c6.sd.sck);
+  assert.equal(c6.display.mosi, c6.sd.mosi);
+});

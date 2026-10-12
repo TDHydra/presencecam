@@ -95,5 +95,6 @@
   "displays": [
     "ssd1306",
     "none"
-  ]
+  ],
+  "sd": {"config": {"type": "sdmmc", "clk": 43, "cmd": 44, "d0": 39, "d1": 40, "d2": 41, "d3": 42, "width": 4, "power": 45, "powerLevel": 0}, "default": true, "note": "The board's TF slot (4-bit SDIO on GPIO39-44, power switched by GPIO45). Its pins aren't on the headers, so it costs nothing."}
 }

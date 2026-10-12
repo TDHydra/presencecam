@@ -84,5 +84,6 @@
       "yoff": 0,
       "invert": true
     }
-  }
+  },
+  "sd": {"config": {"type": "spi", "cs": 4, "miso": 5, "mosi": 6, "sck": 7}, "default": true, "note": "The board's TF slot (SPI on GPIO4-7, sharing GPIO6/7 with the LCD; the two take turns). Its pins are kept free anyway."}
 }

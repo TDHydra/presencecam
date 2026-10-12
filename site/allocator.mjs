@@ -9,6 +9,7 @@
 //   sensors: [{id: "ld2410", groups: {uart: true, out: true}, options: {}}, {id: "vl53l0x", options: {presenceMm: 0}}],
 //   network: "eth" | "wifi",           // only for boards with both (see hasWifi); Ethernet by default
 //   camera: "arducam_mega" | "none",   // a camera id from catalog.cameras offered for this board
+//   storage: "sd" | "flash",           // only for boards with a microSD slot (board.sd); its default otherwise
 //   (each sensor may also have show: {"Distance": "web" | "screen" | "both" | "off", ...})
 //   web: {title, theme: "auto"|"dark"|"light", accent: "#rrggbb", style: "cards"|"list"|"big",
 //         hide: ["log", "rules", "photos", "hardware", "health", "debug"], admin: "open"|"collapsed"},
@@ -42,6 +43,12 @@ export function hasWifi(board) {
 }
 
 // Cameras offered for a board: built-in ones list their boards, wired ones their chips
+// Whether the setup uses the board's microSD slot: the user's pick, else the board's default
+export function useSd(board, sel) {
+  if (!board.sd) return false;
+  return sel.storage ? sel.storage === "sd" : !!board.sd.default;
+}
+
 export function camerasFor(catalog, board) {
   return (catalog.cameras || []).filter((c) => (c.bus === "builtin" ? (c.boards || []).includes(board.id) : (c.chips || []).includes(board.chip)));
 }
@@ -91,6 +98,13 @@ export function allocate(catalog, sel) {
       return s.def;
     });
 
+  // microSD slot first: on some boards (ESP32-CAM) it takes pins parts would otherwise get
+  const sdOn = useSd(board, sel);
+  if (sdOn)
+    for (const [k, g] of Object.entries(board.sd.config))
+      if (["clk", "cmd", "d0", "d1", "d2", "d3", "cs", "sck", "mosi", "miso", "power"].includes(k) && !/SD card/.test(used.get(g) || ""))
+        claim(g, `SD card ${k}`);
+
   // I2C: one shared pair for every I2C part
   const needI2c = display.bus === "i2c" || sensors.some((s) => s.def.bus === "i2c");
   let i2c = null;
@@ -110,6 +124,7 @@ export function allocate(catalog, sel) {
     ...(board.bootOutputs?.length ? { outputs: board.bootOutputs.map(({ gpio, level }) => ({ gpio, level })) } : {}),
     ...(board.ethernet && (sel.network !== "wifi" || !hasWifi(board)) ? { eth: { ...board.ethernet } } : {}),
     ...(board.wifiHosted ? { wifiHosted: { ...board.wifiHosted } } : {}),
+    ...(sdOn ? { sd: { ...board.sd.config } } : {}),
     i2c: i2c || { sda: -1, scl: -1 },
     display: { type: "none" },
     layout: findById(catalog.layouts, sel.layout) ? sel.layout : catalog.layouts[0].id,
@@ -267,6 +282,9 @@ export function allocate(catalog, sel) {
   if (w.admin === "collapsed") web.admin = "collapsed";
   if (Object.keys(web).length) config.web = web;
 
+  if (sdOn && errors.some((e) => / used by SD card/.test(e)))
+    errors.push(`On the ${board.short || board.name} the microSD card needs those pins: pick "Flash only" under Storage to use them for parts.`);
+
   // Power checks
   const fiveVolt = parts.filter((p) => p.pins.some((x) => x.to.power === "5v"));
   if (fiveVolt.length && !board.positionsVerified)
@@ -287,6 +305,9 @@ export function configPins(config) {
   if (config.wifiHosted) for (const k of ["clk", "cmd", "d0", "d1", "d2", "d3", "rst"]) add("Wi-Fi co-processor " + k, config.wifiHosted[k] ?? -1);
   if (config.camera) for (const k of ["cs", "sck", "mosi", "miso"]) if (config.camera[k] !== undefined) add("camera " + k, config.camera[k]);
   if (config.eth) for (const k of ["sclk", "mosi", "miso", "cs", "int", "rst"]) add("ethernet " + k, config.eth[k] ?? -1);
+  // An SPI card may share the LCD's clock and data lines (ESP32-C6-LCD-1.47): listed once, as the display's
+  const lcdShared = (k, g) => config.display.type === "st7789" && ((k === "sck" && g === config.display.sclk) || (k === "mosi" && g === config.display.mosi));
+  if (config.sd) for (const k of ["clk", "cmd", "d0", "d1", "d2", "d3", "cs", "sck", "mosi", "miso", "power"]) if (config.sd[k] !== undefined && !lcdShared(k, config.sd[k])) add("SD card " + k, config.sd[k]);
   add("I2C SDA", config.i2c.sda);
   add("I2C SCL", config.i2c.scl);
   if (config.display.type === "st7789") for (const k of ["mosi", "sclk", "cs", "dc", "rst", "bl"]) add("display " + k, config.display[k]);

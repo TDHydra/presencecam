@@ -5,6 +5,7 @@
 
 #include "gfx.h"
 #include "hwconfig.h"
+#include "storage.h"
 
 namespace {
 
@@ -21,7 +22,9 @@ class Panel : public lgfx::LGFX_Device {
     b.freq_write = 40000000;
     b.pin_sclk = hwPin(d, "sclk");
     b.pin_mosi = hwPin(d, "mosi");
-    b.pin_miso = -1;
+    // A microSD card on the same bus (ESP32-C6-LCD-1.47) needs MISO on it and turns about
+    bool sharedSd = storageCardSharesDisplay();
+    b.pin_miso = sharedSd ? hwPin(hw["sd"], "miso") : -1;
     b.pin_dc = hwPin(d, "dc");
     b.dma_channel = SPI_DMA_CH_AUTO;
     bus.config(b);
@@ -38,7 +41,7 @@ class Panel : public lgfx::LGFX_Device {
     p.offset_y = d["yoff"] | 0;
     p.invert = d["invert"] | true;
     p.readable = false;
-    p.bus_shared = false;
+    p.bus_shared = sharedSd;
     panel.config(p);
 
     if (hwPin(d, "bl") >= 0) {

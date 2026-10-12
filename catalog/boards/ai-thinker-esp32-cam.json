@@ -76,5 +76,6 @@
   "displays": [
     "ssd1306",
     "none"
-  ]
+  ],
+  "sd": {"config": {"type": "sdmmc", "clk": 14, "cmd": 15, "d0": 2, "width": 1}, "default": false, "note": "Uses GPIO14, 15 and 2 (1-bit mode), which are also the header's I\u00b2C and UART pins: with the card on, only GPIO13 is left for parts."}
 }

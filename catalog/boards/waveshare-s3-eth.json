@@ -249,5 +249,6 @@
   "displays": [
     "ssd1306",
     "none"
-  ]
+  ],
+  "sd": {"config": {"type": "spi", "cs": 4, "miso": 5, "mosi": 6, "sck": 7}, "default": true, "note": "The board's TF slot (SPI on GPIO4-7, its own SPI controller, so it doesn't slow the Ethernet). Its pins are kept free anyway."}
 }

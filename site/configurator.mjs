@@ -1,7 +1,7 @@
 // The flasher page's configurator: board → display → sensors → layout → what shows where →
 // the web page, then the wiring diagram, pin table, and the install button with firmware made
 // for this setup (generate.mjs), plus update downloads and "send setup to board".
-import { allocate, camerasFor, defaultSelection, findById, hasWifi } from "./allocator.mjs";
+import { allocate, camerasFor, defaultSelection, findById, hasWifi, useSd } from "./allocator.mjs";
 import { buildImage } from "./generate.mjs";
 import { sendConfig, serialSupported } from "./serial.mjs";
 import { renderWiring } from "./wiring.mjs";
@@ -50,6 +50,13 @@ function renderChoices() {
   $("networks").innerHTML = both
     ? choice("network", "eth", net === "eth", "Ethernet", "Address by DHCP over the network cable (and PoE power, if the board has it).") +
       choice("network", "wifi", net === "wifi", "Wi-Fi", "Joins your Wi-Fi; the network jack isn't used.")
+    : "";
+
+  $("sdpick").hidden = !board.sd;
+  const sd = useSd(board, sel);
+  $("storages").innerHTML = board.sd
+    ? choice("storage", "sd", sd, "microSD card", `The event log, photos and debug log go on the card (falls back to flash without one). ${board.sd.note || ""}`) +
+      choice("storage", "flash", !sd, "Flash only", "Keeps everything in the board's flash (small: the newest few photos and log lines).")
     : "";
 
   $("displays").innerHTML = board.displays
@@ -305,10 +312,12 @@ function onChange(e) {
     return;
   }
   if (t.name === "board") {
-    const keep = sel.sensors;
+    const { sensors, web } = sel;  // the parts and the web page carry over; storage goes back to the board's default
     sel = defaultSelection(catalog, t.value);
-    sel.sensors = keep;
+    sel.sensors = sensors;
+    if (web) sel.web = web;
   } else if (t.name === "network") sel.network = t.value;
+  else if (t.name === "storage") sel.storage = t.value;
   else if (t.name === "display") {
     sel.display = t.value;
     justAdded = t.value !== "none" && t.value !== "builtin" ? t.value : null;

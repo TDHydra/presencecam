@@ -22,6 +22,7 @@ bool hwSafeMode = false;
 static const char* DEFAULT_JSON =
     R"({"v":1,"board":"waveshare-p4-eth","chip":"ESP32-P4","led":-1,"button":-1,)"
     R"("eth":{"type":"ip101","phyAddr":1,"mdc":31,"mdio":52,"power":51},"i2c":{"sda":-1,"scl":-1},)"
+    R"("sd":{"type":"sdmmc","clk":43,"cmd":44,"d0":39,"d1":40,"d2":41,"d3":42,"width":4,"power":45,"powerLevel":0},)"
     R"("display":{"type":"none"},"layout":"basic","sensors":[]})";
 #elif CONFIG_IDF_TARGET_ESP32C3
 static const char* DEFAULT_JSON =
@@ -178,10 +179,11 @@ static String validate(JsonDocument& doc) {
     String st = sd["type"] | "";
     if (st == "spi") {
       c.pin(hwPin(sd, "cs"), "SD card cs", true);
-      // The card may share the SPI bus with the camera or a W5500: same sck/mosi/miso is fine.
+      // The card may share the SPI bus with the camera, a W5500 or the LCD: same sck/mosi/miso is fine.
       for (const char* k : {"sck", "mosi", "miso"}) {
         int g = hwPin(sd, k);
-        bool shared = (g >= 0 && (g == hwPin(cam, k) || g == hwPin(eth, strcmp(k, "sck") ? k : "sclk")));
+        const char* busKey = strcmp(k, "sck") ? k : "sclk";
+        bool shared = (g >= 0 && (g == hwPin(cam, k) || g == hwPin(eth, busKey) || g == hwPin(d, busKey)));
         if (!shared) c.pin(g, String("SD card ") + k, strcmp(k, "miso") != 0);
       }
     } else if (st == "sdmmc") {

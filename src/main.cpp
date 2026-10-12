@@ -53,12 +53,12 @@ void setup() {
   JsonVariantConst i2c = hw["i2c"];
   if (hwPin(i2c, "sda") >= 0 && hwPin(i2c, "scl") >= 0) Wire.begin(hwPin(i2c, "sda"), hwPin(i2c, "scl"));
 
-  storageBegin();  // after the outputs: some boards switch the card's power with one
-  debugBegin();
-
   displayBegin();
   displayMessage(FW_NAME, hwSafeMode ? "SAFE MODE" : FW_VERSION, 1500);
   displayLoop();
+  // After the display: a card can share the LCD's SPI bus, which the LCD driver sets up
+  storageBegin();
+  debugBegin();
   sensorsBegin();
   presenceBegin();
   cameraBegin();
