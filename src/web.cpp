@@ -3,7 +3,6 @@
 #include <LittleFS.h>
 #include <Update.h>
 #include <WebServer.h>
-#include <WiFi.h>
 
 #include "config.h"
 #include "display.h"
@@ -74,8 +73,9 @@ static void sendStatus() {
   JsonObject w = j["wifi"].to<JsonObject>();
   w["ssid"] = settings.wifiSsid;
   w["connected"] = netConnected();
-  w["ip"] = netConnected() ? WiFi.localIP().toString() : String("");
-  w["rssi"] = netConnected() ? WiFi.RSSI() : 0;
+  w["ip"] = netIp();
+  w["rssi"] = netRssi();
+  w["wired"] = (bool)NET_WIRED;
   w["ap"] = netApActive();
   w["host"] = netHostname() + ".local";
   w["power"] = powerSummary();
@@ -160,6 +160,7 @@ static void postSettings() {
 static void postWifi() {
   String ssid = server.arg("ssid"), pass = server.arg("pass");
   if (!ssid.length()) { server.send(400, "text/plain", "ssid missing"); return; }
+  if (NET_WIRED) { server.send(400, "text/plain", "this board has no Wi-Fi"); return; }
   // Answer first: if we're on the setup AP, the phone may lose the page while we switch.
   server.send(200, "text/plain", "joining");
   delay(200);
@@ -167,15 +168,13 @@ static void postWifi() {
 }
 
 static void sendScan() {
-  int n = WiFi.scanNetworks();
   String j = "[";
-  for (int i = 0; i < n; i++) {
-    if (i) j += ",";
-    j += "{\"ssid\":\"" + jsonEscape(WiFi.SSID(i)) + "\",\"rssi\":" + String(WiFi.RSSI(i)) +
-         ",\"open\":" + (WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "true" : "false") + "}";
-  }
+  netScan([](const String& ssid, int rssi, bool open, void* ctx) {
+    String& j = *(String*)ctx;
+    if (j.length() > 1) j += ",";
+    j += "{\"ssid\":\"" + jsonEscape(ssid) + "\",\"rssi\":" + String(rssi) + ",\"open\":" + (open ? "true" : "false") + "}";
+  }, &j);
   j += "]";
-  WiFi.scanDelete();
   server.send(200, "application/json", j);
 }
 

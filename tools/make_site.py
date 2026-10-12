@@ -2,7 +2,8 @@
 
     python tools/make_site.py [pio_build_dir] [out_dir]
 
-Defaults: .pio/build -> _site. Needs both firmware builds (pio run builds esp32 and esp32s3).
+Defaults: .pio/build -> _site. Needs every firmware build; the ESP32-P4 ones are looked for in
+.pio/build-p4 next to it (see tools/serve.sh).
 Serve the result over https or localhost, because Web Serial only works in a secure context:
     python -m http.server -d _site
 """
@@ -17,7 +18,18 @@ out = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else root / "_site"
 version = (root / "VERSION").read_text().strip()
 
 # PlatformIO env -> (ESP Web Tools chip family, file name stem)
-CHIPS = {"esp32": ("ESP32", "presencecam-esp32"), "esp32s3": ("ESP32-S3", "presencecam-esp32s3")}
+CHIPS = {
+    "esp32": ("ESP32", "presencecam-esp32"),
+    "esp32s3": ("ESP32-S3", "presencecam-esp32s3"),
+    "esp32p4": ("ESP32-P4", "presencecam-esp32p4"),
+    "esp32p4r3": ("ESP32-P4", "presencecam-esp32p4r3"),
+}
+# ESP Web Tools picks a build by chip family only, so the two ESP32-P4 revisions get a manifest
+# each; the configurator switches between them.
+MANIFESTS = {
+    "manifest.json": ["esp32", "esp32s3", "esp32p4"],
+    "manifest-p4r3.json": ["esp32", "esp32s3", "esp32p4r3"],
+}
 
 if out.exists():
     shutil.rmtree(out)
@@ -32,21 +44,25 @@ for kind in ("boards", "sensors", "displays", "layouts"):
 
 fw = out / "firmware"
 fw.mkdir()
-manifest_builds = []
 for env, (family, stem) in CHIPS.items():
     build = builds / env
+    if not build.exists():
+        build = builds.with_name("build-p4") / env
     shutil.copy(build / "presencecam-merged.bin", fw / f"{stem}.bin")
     shutil.copy(build / "firmware.bin", fw / f"{stem}-ota.bin")
-    manifest_builds.append({"chipFamily": family, "parts": [{"path": f"firmware/{stem}.bin", "offset": 0}]})
 
-manifest = {
-    "name": "PresenceCam",
-    "version": version,
-    "new_install_prompt_erase": True,
-    "new_install_improv_wait_time": 20,
-    "builds": manifest_builds,
-}
-(out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+for name, envs in MANIFESTS.items():
+    manifest = {
+        "name": "PresenceCam",
+        "version": version,
+        "new_install_prompt_erase": True,
+        "new_install_improv_wait_time": 20,
+        "builds": [
+            {"chipFamily": CHIPS[env][0], "parts": [{"path": f"firmware/{CHIPS[env][1]}.bin", "offset": 0}]}
+            for env in envs
+        ],
+    }
+    (out / name).write_text(json.dumps(manifest, indent=2) + "\n")
 html = out / "index.html"
 html.write_text(html.read_text().replace("{{VERSION}}", version))
 print("site ready in", out, "version", version)

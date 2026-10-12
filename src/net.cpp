@@ -1,25 +1,12 @@
 #include "net.h"
 
-#include <DNSServer.h>
 #include <ESPmDNS.h>
-#include <WiFi.h>
 
 #include "config.h"
 #include "display.h"
 #include "eventlog.h"
 #include "power.h"
 #include "settings.h"
-
-static DNSServer dns;
-static bool apOn = false;
-static bool wasConnected = false;
-static uint32_t lostSince = 0;
-static uint32_t apOffAt = 0;  // close the setup AP a while after we got online
-static bool radioOff = false;  // Wi-Fi disabled for this boot because power is too weak
-
-static void applyTxPower() {
-  WiFi.setTxPower((wifi_power_t)powerTxQuarterDbm());
-}
 
 String netApName() { return "PresenceCam-" + deviceId(); }
 
@@ -33,9 +20,93 @@ String netHostname() {
   return h.length() ? h : "presencecam";
 }
 
+String netUrl() { return netConnected() ? "http://" + netIp() + "/" : ""; }
+
+// Just got an address: tell the console, screen and log, and (re)start mDNS
+static void announce(const char* tag, const char* name) {
+  Serial.printf("%s: connected, %s  (http://%s.local)\n", tag, netUrl().c_str(), netHostname().c_str());
+  MDNS.end();
+  if (MDNS.begin(netHostname().c_str())) MDNS.addService("http", "tcp", 80);
+  displayMessage(String(name) + " connected", netIp(), 5000);
+  logEvent(tag, netIp());
+}
+
+#if NET_WIRED
+// ---------------------------------------------------------------------------------------
+// Ethernet (ESP32-P4's internal EMAC + IP101 PHY, pins as on the Waveshare ESP32-P4-ETH)
+
+#include <ETH.h>
+
+static bool wasConnected = false;
+
+bool netConnected() { return ETH.connected() && ETH.hasIP(); }
+bool netApActive() { return false; }
+String netIp() { return netConnected() ? ETH.localIP().toString() : ""; }
+String netLink() { return "Ethernet " + String(ETH.linkSpeed()) + "M" + (ETH.fullDuplex() ? "" : " half duplex"); }
+int netRssi() { return 0; }
+void netForget() {}
+int netScan(void (*)(const String&, int, bool, void*), void*) { return 0; }
+void netApplyTxPower() {}
+void netStartSetupAp(uint32_t) { Serial.println("eth: this board has no Wi-Fi; plug in a network cable"); }
+
+bool netJoin(const String&, const String&, uint32_t) {
+  Serial.println("eth: this board has no Wi-Fi; plug in a network cable");
+  return false;
+}
+
+void netBegin() {
+  ETH.setHostname(netHostname().c_str());
+  if (!ETH.begin(ETH_PHY_IP101, 1, 31, 52, 51, EMAC_CLK_EXT_IN)) {
+    Serial.println("eth: Ethernet did not start");
+    return;
+  }
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  Serial.println("eth: waiting for a cable and DHCP");
+}
+
+void netLoop() {
+  bool up = netConnected();
+  if (up && !wasConnected) {
+    wasConnected = true;
+    announce("eth", "Ethernet");
+  } else if (!up && wasConnected) {
+    wasConnected = false;
+    Serial.println("eth: link lost");
+  }
+}
+
+#else
+// ---------------------------------------------------------------------------------------
+// Wi-Fi
+
+#include <DNSServer.h>
+#include <WiFi.h>
+
+static DNSServer dns;
+static bool apOn = false;
+static bool wasConnected = false;
+static uint32_t lostSince = 0;
+static uint32_t apOffAt = 0;  // close the setup AP a while after we got online
+static bool radioOff = false;  // Wi-Fi disabled for this boot because power is too weak
+
+static void applyTxPower() {
+  WiFi.setTxPower((wifi_power_t)powerTxQuarterDbm());
+}
+
 bool netConnected() { return WiFi.status() == WL_CONNECTED; }
 bool netApActive() { return apOn; }
-String netUrl() { return netConnected() ? "http://" + WiFi.localIP().toString() + "/" : ""; }
+String netIp() { return netConnected() ? WiFi.localIP().toString() : ""; }
+String netLink() { return WiFi.SSID(); }
+int netRssi() { return netConnected() ? WiFi.RSSI() : 0; }
+void netForget() { WiFi.disconnect(true); }
+
+int netScan(void (*cb)(const String& ssid, int rssi, bool open, void* ctx), void* ctx) {
+  if (radioOff) return 0;
+  int n = WiFi.scanNetworks();
+  for (int i = 0; i < n; i++) cb(WiFi.SSID(i), WiFi.RSSI(i), WiFi.encryptionType(i) == WIFI_AUTH_OPEN, ctx);
+  WiFi.scanDelete();
+  return max(n, 0);
+}
 
 static void startAp() {
   if (apOn) return;
@@ -96,11 +167,7 @@ void netLoop() {
 
   if (up && !wasConnected) {
     wasConnected = true;
-    Serial.printf("wifi: connected, %s  (http://%s.local)\n", netUrl().c_str(), netHostname().c_str());
-    MDNS.end();
-    if (MDNS.begin(netHostname().c_str())) MDNS.addService("http", "tcp", 80);
-    displayMessage("Wi-Fi connected", WiFi.localIP().toString(), 5000);
-    logEvent("wifi", WiFi.localIP().toString());
+    announce("wifi", "Wi-Fi");
     if (apOn) apOffAt = max(apOffAt, now + 60000);  // give the setup page time to show the new address
   } else if (!up && wasConnected) {
     wasConnected = false;
@@ -148,6 +215,8 @@ bool netJoin(const String& ssid, const String& pass, uint32_t timeoutMs) {
   return netConnected();
 }
 
+#endif
+
 // ---------------------------------------------------------------------------------------
 // Improv Serial (https://www.improv-wifi.com/serial/), used by ESP Web Tools.
 // Packet: "IMPROV" | version 1 | type | length | data... | checksum (sum of all bytes)
@@ -191,6 +260,7 @@ static void improvResult(uint8_t cmd, std::initializer_list<String> strs) {
 }
 
 static void improvRpc(const uint8_t* d, uint8_t len) {
+  if (NET_WIRED) return;  // nothing to provision; staying quiet makes the installer skip its Wi-Fi step
   if (len < 2) { improvError(ERR_INVALID); return; }
   uint8_t cmd = d[0];
   switch (cmd) {
@@ -202,12 +272,9 @@ static void improvRpc(const uint8_t* d, uint8_t len) {
       improvResult(CMD_INFO, {FW_NAME, FW_VERSION, "ESP32", settings.name});
       break;
     case CMD_SCAN: {
-      int found = radioOff ? 0 : WiFi.scanNetworks();
-      for (int i = 0; i < found; i++) {
-        improvResult(CMD_SCAN, {WiFi.SSID(i), String(WiFi.RSSI(i)),
-                                WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "NO" : "YES"});
-      }
-      WiFi.scanDelete();
+      netScan([](const String& ssid, int rssi, bool open, void*) {
+        improvResult(CMD_SCAN, {ssid, String(rssi), open ? "NO" : "YES"});
+      }, nullptr);
       uint8_t end[2] = {CMD_SCAN, 0};
       improvSend(IMP_RESULT, end, 2);
       break;

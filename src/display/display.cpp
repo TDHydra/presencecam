@@ -1,6 +1,5 @@
 #include "display.h"
 
-#include <WiFi.h>
 #include <lgfx/utility/lgfx_qrcode.h>
 
 #include "config.h"
@@ -117,7 +116,7 @@ String uiDuration(uint32_t s) {
 int uiHeader(Gfx& g, const char* title) {
   bool tall = g.height() >= 120;
   g.font(F_SMALL);
-  const char* w = netConnected() ? "WiFi" : (netApActive() ? "AP" : "--");
+  const char* w = netConnected() ? (NET_WIRED ? "LAN" : "WiFi") : (netApActive() ? "AP" : "--");
   int top = tall ? 30 : 13;
   if (tall) g.fillRect(0, 0, g.width(), 24, C_ACCENT);
   g.text(tall ? 4 : 0, tall ? 4 : 0, title);
@@ -141,10 +140,13 @@ static int line(Gfx& g, int y, FontSize f, const String& s, Color c = C_FG) {
 static void pageNetwork(Gfx& g) {
   int y = uiHeader(g, "Network");
   if (netConnected()) {
-    y = line(g, y, F_SMALL, WiFi.SSID(), C_MUTED);
-    y = line(g, y, F_MEDIUM, WiFi.localIP().toString());
+    y = line(g, y, F_SMALL, netLink(), C_MUTED);
+    y = line(g, y, F_MEDIUM, netIp());
     y = line(g, y, F_SMALL, netHostname() + ".local");
-    line(g, y, F_SMALL, "signal " + String(WiFi.RSSI()) + " dBm", C_MUTED);
+    if (!NET_WIRED) line(g, y, F_SMALL, "signal " + String(netRssi()) + " dBm", C_MUTED);
+  } else if (NET_WIRED) {
+    y = line(g, y, F_SMALL, "Ethernet", C_MUTED);
+    line(g, y, F_SMALL, "plug in a network cable");
   } else if (netApActive()) {
     y = line(g, y, F_SMALL, "Setup: join Wi-Fi", C_MUTED);
     y = line(g, y, F_MEDIUM, netApName());
@@ -194,7 +196,7 @@ static void drawInfo(Gfx& g) {
   if (netConnected()) {
     qr = netUrl();
     l1 = "Open";
-    l2 = WiFi.localIP().toString();
+    l2 = netIp();
     l3 = netHostname() + ".local";
   } else if (netApActive()) {
     qr = "WIFI:S:" + netApName() + ";T:nopass;;";
@@ -202,7 +204,7 @@ static void drawInfo(Gfx& g) {
     l2 = "PresenceCam-";
     l3 = deviceId();
   } else {
-    l1 = "No Wi-Fi yet";
+    l1 = NET_WIRED ? "No network yet" : "No Wi-Fi yet";
   }
   if (g.height() >= 120) {
     int px = qr.length() ? drawQr(g, qr, 10, 8, g.width() - 20) : 0;

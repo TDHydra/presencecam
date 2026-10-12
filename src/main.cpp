@@ -40,6 +40,11 @@ void setup() {
 
   settingsLoad();
   hwBegin(taps >= 3);
+  int hold = hwPin(hw.as<JsonVariantConst>(), "hold");
+  if (hold >= 0) {  // keep a battery board on after the PWR button is released
+    pinMode(hold, OUTPUT);
+    digitalWrite(hold, HIGH);
+  }
   JsonVariantConst i2c = hw["i2c"];
   if (hwPin(i2c, "sda") >= 0 && hwPin(i2c, "scl") >= 0) Wire.begin(hwPin(i2c, "sda"), hwPin(i2c, "scl"));
 

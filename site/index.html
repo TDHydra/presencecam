@@ -99,7 +99,12 @@ a{color:var(--acc)}
     </esp-web-install-button>
   </div>
   <p class="mut" id="chipnote"></p>
-  <p class="mut">On a new board, let it erase the device when asked. When it finishes it asks for your Wi-Fi name and password and sends them over the cable. Then close the installer window.</p>
+  <div id="p4rev" hidden>
+    <p>ESP32-P4 chips come in two revisions that need different firmware. The revision is printed on the chip (<em>v1.0</em>, <em>v1.3</em> or <em>v3.x</em>) and shown in the installer's log. If the board doesn't start after installing, install the other one.</p>
+    <label class="choice"><input type="radio" name="p4rev" value="1"><span><b>Revision v1.x</b><small>Most boards sold before 2026</small></span></label>
+    <label class="choice"><input type="radio" name="p4rev" value="3"><span><b>Revision v3.x</b></span></label>
+  </div>
+  <p class="mut" id="wifinote">On a new board, let it erase the device when asked. When it finishes it asks for your Wi-Fi name and password and sends them over the cable. Then close the installer window.</p>
 </section>
 
 <section id="step-send">
@@ -152,7 +157,7 @@ a{color:var(--acc)}
     <p>You can also pick the Wi-Fi power on the device's web page or with <code>txpower 8.5</code> in the console.</p></details>
 </section>
 
-<footer class="mut">Flashing uses <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>. Firmware files: <a href="firmware/presencecam-esp32.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3.bin">ESP32-S3</a> (full images, offset 0), and OTA updates for the device's web page: <a href="firmware/presencecam-esp32-ota.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-ota.bin">ESP32-S3</a>.</footer>
+<footer class="mut">Flashing uses <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>. Firmware files: <a href="firmware/presencecam-esp32.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32p4.bin">ESP32-P4 v1.x</a>, <a href="firmware/presencecam-esp32p4r3.bin">ESP32-P4 v3.x</a> (full images, offset 0), and OTA updates for the device's web page: <a href="firmware/presencecam-esp32-ota.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-ota.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32p4-ota.bin">ESP32-P4 v1.x</a>, <a href="firmware/presencecam-esp32p4r3-ota.bin">ESP32-P4 v3.x</a>.</footer>
 </main>
 <script type="module">
 import { start } from "./configurator.mjs";

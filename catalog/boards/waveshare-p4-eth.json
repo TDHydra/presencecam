@@ -1,0 +1,98 @@
+{
+  "id": "waveshare-p4-eth",
+  "name": "Waveshare ESP32-P4-ETH / ESP32-P4-POE-ETH",
+  "short": "ESP32-P4-ETH",
+  "chip": "ESP32-P4",
+  "notes": "Wired Ethernet (100M, PoE on the POE version), no Wi-Fi: it gets its address by DHCP and has no setup network. The VBUS pin is the board's 5 V rail and is live on PoE as well as USB. Drawn with USB at the bottom, so the network jack is at the top; that is upside down compared to Waveshare's pinout picture. There is no user LED, and the BOOT button doubles as an Ethernet pin, so there is no page button.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "48", "gpio": 48 },
+      { "label": "47", "gpio": 47 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "46", "gpio": 46 },
+      { "label": "33", "gpio": 33 },
+      { "label": "32", "gpio": 32 },
+      { "label": "27", "gpio": 27 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "26", "gpio": 26 },
+      { "label": "RUN" },
+      { "label": "23", "gpio": 23 },
+      { "label": "22", "gpio": 22 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "21", "gpio": 21 },
+      { "label": "20", "gpio": 20 },
+      { "label": "3V3", "power": "3v3" },
+      { "label": "EN" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "VSYS" },
+      { "label": "VBUS", "power": "5v" }
+    ],
+    "right": [
+      { "label": "DP/25", "gpio": 25 },
+      { "label": "DM/24", "gpio": 24 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "SDA/7", "gpio": 7 },
+      { "label": "SCL/8", "gpio": 8 },
+      { "label": "2", "gpio": 2 },
+      { "label": "3", "gpio": 3 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "4", "gpio": 4 },
+      { "label": "5", "gpio": 5 },
+      { "label": "6", "gpio": 6 },
+      { "label": "14", "gpio": 14 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "15", "gpio": 15 },
+      { "label": "16", "gpio": 16 },
+      { "label": "17", "gpio": 17 },
+      { "label": "18", "gpio": 18 },
+      { "label": "GND", "power": "gnd" },
+      { "label": "19", "gpio": 19 },
+      { "label": "54", "gpio": 54 }
+    ]
+  },
+  "forbidden": {
+    "28": "Ethernet",
+    "29": "Ethernet",
+    "30": "Ethernet",
+    "31": "Ethernet",
+    "34": "Ethernet",
+    "35": "Ethernet and BOOT button",
+    "37": "USB serial TX",
+    "38": "USB serial RX",
+    "49": "Ethernet",
+    "50": "Ethernet",
+    "51": "Ethernet",
+    "52": "Ethernet"
+  },
+  "reserved": {
+    "9": "audio codec",
+    "10": "audio codec",
+    "11": "audio codec",
+    "12": "audio codec",
+    "13": "audio codec",
+    "24": "USB 1.1 D- (header DM)",
+    "25": "USB 1.1 D+ (header DP)",
+    "39": "SD card",
+    "40": "SD card",
+    "41": "SD card",
+    "42": "SD card",
+    "43": "SD card",
+    "44": "SD card",
+    "53": "speaker amplifier"
+  },
+  "i2c": {
+    "sda": 7,
+    "scl": 8
+  },
+  "uarts": [
+    { "num": 1, "rx": 2, "tx": 3 },
+    { "num": 2, "rx": 4, "tx": 5 }
+  ],
+  "digitalPrefer": [6, 14, 15, 16, 17, 18, 19, 54, 20, 21, 22, 23, 26, 27, 32, 33, 46, 47, 48],
+  "button": -1,
+  "displays": [
+    "ssd1306",
+    "none"
+  ]
+}

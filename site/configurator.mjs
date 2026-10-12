@@ -95,11 +95,34 @@ function renderResult() {
 
   $("config").textContent = result.config ? JSON.stringify(result.config) : "";
   $("chipnote").textContent = `This setup needs the ${board.chip} firmware. The installer picks it automatically from the chip it finds.`;
+  const p4 = board.chip === "ESP32-P4";
+  $("p4rev").hidden = !p4;
+  for (const r of document.getElementsByName("p4rev")) r.checked = r.value === p4Rev();
+  document.querySelector("esp-web-install-button").setAttribute("manifest", p4 && p4Rev() === "3" ? "manifest-p4r3.json" : "manifest.json");
+  $("wifinote").textContent = p4
+    ? "On a new board, let it erase the device when asked. This board has no Wi-Fi: plug in a network cable and it gets an address by DHCP."
+    : "On a new board, let it erase the device when asked. When it finishes it asks for your Wi-Fi name and password and sends them over the cable. Then close the installer window.";
   $("send").disabled = !!result.errors.length || !serialSupported();
+}
+
+// Which ESP32-P4 chip revision to install for: "1" (v1.x) or "3"
+function p4Rev() {
+  try {
+    return localStorage.getItem(STORE + ".p4rev") || "1";
+  } catch {
+    return "1";
+  }
 }
 
 function onChange(e) {
   const t = e.target;
+  if (t.name === "p4rev") {
+    try {
+      localStorage.setItem(STORE + ".p4rev", t.value);
+    } catch {}
+    renderResult();
+    return;
+  }
   if (t.name === "board") {
     const keep = sel.sensors;
     sel = defaultSelection(catalog, t.value);
@@ -157,6 +180,7 @@ export async function start() {
   renderChoices();
   renderResult();
   $("configurator").addEventListener("change", onChange);
+  $("p4rev").addEventListener("change", onChange);
   $("send").addEventListener("click", onSend);
   $("dlsvg").addEventListener("click", downloadSvg);
   $("copycfg").addEventListener("click", () => navigator.clipboard?.writeText($("config").textContent));

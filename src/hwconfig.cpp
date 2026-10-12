@@ -10,7 +10,12 @@ bool hwSafeMode = false;
 
 // Built-in defaults. ESP32: today's NodeMCU wiring (OLED on 21/22, LD2410 on 16/17/27).
 // ESP32-S3: the Waveshare ESP32-S3-LCD-1.47B with its own LCD and no sensors yet.
-#if CONFIG_IDF_TARGET_ESP32S3
+// ESP32-P4: the Waveshare ESP32-P4-ETH with nothing attached.
+#if CONFIG_IDF_TARGET_ESP32P4
+static const char* DEFAULT_JSON =
+    R"({"v":1,"board":"waveshare-p4-eth","led":-1,"button":-1,"i2c":{"sda":-1,"scl":-1},)"
+    R"("display":{"type":"none"},"layout":"basic","sensors":[]})";
+#elif CONFIG_IDF_TARGET_ESP32S3
 static const char* DEFAULT_JSON =
     R"({"v":1,"board":"waveshare-s3-lcd-147b","led":38,"ledType":"ws2812","button":0,"i2c":{"sda":-1,"scl":-1},)"
     R"("display":{"type":"st7789","mosi":45,"sclk":40,"cs":42,"dc":41,"rst":39,"bl":46,"w":172,"h":320,"xoff":34,"yoff":0,"invert":true},)"
@@ -36,7 +41,12 @@ const char* hwBoardName() { return hw["board"] | "unknown"; }
 // --- pin rules per chip ---------------------------------------------------------------
 
 static String pinProblem(int gpio, bool needsOutput) {
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32P4
+  if (gpio < 0 || gpio > 54) return "does not exist on the ESP32-P4";
+  if ((gpio >= 28 && gpio <= 31) || gpio == 34 || gpio == 35 || (gpio >= 49 && gpio <= 52)) return "is used by Ethernet";
+  if (gpio == 37 || gpio == 38) return "is the USB serial port";
+  (void)needsOutput;
+#elif CONFIG_IDF_TARGET_ESP32S3
   if (gpio < 0 || gpio > 48 || (gpio > 21 && gpio < 26)) return "does not exist on the ESP32-S3";
   if (gpio >= 26 && gpio <= 32) return "is used by the flash chip";
 #ifdef BOARD_HAS_PSRAM
@@ -77,6 +87,7 @@ static String validate(JsonDocument& doc) {
   Checker c;
   c.pin(hwPin(doc.as<JsonVariantConst>(), "led"), "status LED", true, true);
   c.pin(hwPin(doc.as<JsonVariantConst>(), "button"), "button", false, true);
+  c.pin(hwPin(doc.as<JsonVariantConst>(), "hold"), "power hold", true, true);
 
   JsonVariantConst i2c = doc["i2c"].as<JsonVariantConst>();
   bool hasI2c = hwPin(i2c, "sda") >= 0 && hwPin(i2c, "scl") >= 0;
@@ -199,6 +210,7 @@ void hwForEachPin(void (*cb)(const String&, int, void*), void* ctx) {
   };
   emit("status LED", hwPin(root, "led"));
   emit("button", hwPin(root, "button"));
+  emit("power hold", hwPin(root, "hold"));
   emit("I2C SDA", hwPin(root["i2c"], "sda"));
   emit("I2C SCL", hwPin(root["i2c"], "scl"));
   JsonVariantConst d = root["display"];

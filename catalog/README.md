@@ -17,6 +17,7 @@ never reads them: it gets the finished hardware config (see `src/hwconfig.h`).
 | `uarts` | Free hardware UARTs in order of preference: `{"num": 2, "rx": 16, "tx": 17}` |
 | `digitalPrefer` | GPIOs for plain digital inputs, best first |
 | `led`, `ledType`, `button` | Status LED (`gpio` or `ws2812`) and the BOOT button |
+| `powerHold` | GPIO the firmware drives high at boot to keep a battery board switched on |
 | `displays` | Display ids offered on this board, first is the default |
 | `builtinDisplay` | Display config for a screen soldered on the board |
 

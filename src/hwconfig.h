@@ -10,6 +10,7 @@
 //  "sensors":[{"type":"ld2410","uart":2,"rx":16,"tx":17,"out":27},{"type":"vl53l0x","presenceMm":0}],
 //  "buttons":{"short":"next","double":"dim","hold3":"info","hold10":"forget_wifi"}}
 //
+// "hold" (optional) is a GPIO driven high at boot to keep a battery-powered board switched on.
 // Display types: none, ssd1306, sh1106 (I2C OLEDs on the i2c pins), st7789 (SPI LCD, with
 // mosi/sclk/cs/dc/rst/bl/w/h/xoff/yoff/invert). Sensor types: ld2410, vl53l0x.
 // Without a stored config, the chip's built-in default is used (see defaultConfigJson()).

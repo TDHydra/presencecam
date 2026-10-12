@@ -7,7 +7,9 @@
 #endif
 #define FW_NAME "PresenceCam"
 
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32P4
+#define FW_CHIP "ESP32-P4"
+#elif CONFIG_IDF_TARGET_ESP32S3
 #define FW_CHIP "ESP32-S3"
 #else
 #define FW_CHIP "ESP32"

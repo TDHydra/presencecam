@@ -28,7 +28,9 @@ jobs:
 
       - uses: actions/cache@v4
         with:
-          path: ~/.platformio
+          path: |
+            ~/.platformio
+            ~/.platformio-p4
           key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
 
       - uses: actions/setup-node@v4
@@ -43,6 +45,10 @@ jobs:
 
       - name: Build firmware (ESP32 and ESP32-S3)
         run: pio run
+
+      # The ESP32-P4 platform's packages clash with the ones above, so it gets its own core dir
+      - name: Build firmware (ESP32-P4 v1.x and v3.x)
+        run: PLATFORMIO_CORE_DIR="$HOME/.platformio-p4" PLATFORMIO_BUILD_DIR=.pio/build-p4 pio run -e esp32p4 -e esp32p4r3
 
       - name: Assemble web flasher site
         run: python tools/make_site.py .pio/build _site

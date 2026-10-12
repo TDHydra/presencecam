@@ -1,0 +1,88 @@
+{
+  "id": "waveshare-s3-lcd-169",
+  "name": "Waveshare ESP32-S3-LCD-1.69",
+  "short": "ESP32-S3-LCD-1.69",
+  "chip": "ESP32-S3",
+  "notes": "Has a 1.69\" 240x280 LCD, RTC, IMU, buzzer and battery charger on board. The 12-pin header is listed top to bottom as in Waveshare's pinout. These pins are for the V2 board; the first version used GPIO33-36 for the buzzer and power, which clash with the PSRAM. On battery, press PWR to switch on; the firmware then holds the power on.",
+  "positionsVerified": true,
+  "headers": {
+    "left": [
+      { "label": "GPIO18", "gpio": 18 },
+      { "label": "GPIO17", "gpio": 17 },
+      { "label": "GPIO16", "gpio": 16 },
+      { "label": "GPIO3", "gpio": 3 },
+      { "label": "GPIO2", "gpio": 2 },
+      { "label": "SDA", "gpio": 11 },
+      { "label": "SCL", "gpio": 10 },
+      { "label": "U0TXD", "gpio": 43 },
+      { "label": "U0RXD", "gpio": 44 },
+      { "label": "3.3", "power": "3v3" },
+      { "label": "GND", "power": "gnd" },
+      { "label": "5V", "power": "5v" }
+    ],
+    "right": []
+  },
+  "forbidden": {
+    "19": "USB D-",
+    "20": "USB D+",
+    "26": "flash",
+    "27": "flash",
+    "28": "flash",
+    "29": "flash",
+    "30": "flash",
+    "31": "flash",
+    "32": "flash",
+    "33": "PSRAM",
+    "34": "PSRAM",
+    "35": "PSRAM",
+    "36": "PSRAM",
+    "37": "PSRAM"
+  },
+  "reserved": {
+    "0": "BOOT button",
+    "1": "battery voltage",
+    "4": "LCD data/command",
+    "5": "LCD chip select",
+    "6": "LCD clock",
+    "7": "LCD data",
+    "8": "LCD reset",
+    "15": "LCD backlight",
+    "39": "RTC interrupt",
+    "40": "PWR button",
+    "41": "power hold",
+    "42": "buzzer"
+  },
+  "i2c": {
+    "sda": 11,
+    "scl": 10
+  },
+  "uarts": [
+    { "num": 1, "rx": 18, "tx": 17 },
+    { "num": 2, "rx": 44, "tx": 43 }
+  ],
+  "digitalPrefer": [16, 2, 3, 18, 17, 44, 43],
+  "button": 0,
+  "powerHold": 41,
+  "displays": [
+    "builtin",
+    "ssd1306",
+    "none"
+  ],
+  "builtinDisplay": {
+    "name": "Built-in 1.69\" LCD (ST7789V2, 240x280)",
+    "config": {
+      "type": "st7789",
+      "mosi": 7,
+      "sclk": 6,
+      "cs": 5,
+      "dc": 4,
+      "rst": 8,
+      "bl": 15,
+      "w": 240,
+      "h": 280,
+      "xoff": 0,
+      "yoff": 20,
+      "invert": true
+    }
+  }
+}

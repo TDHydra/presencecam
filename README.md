@@ -18,8 +18,10 @@ sends your setup to the board. Nothing to compile, no pins to edit.
 | **Boards** | ESP32 DevKit / NodeMCU ESP-32S (30 pin) | DOIT DevKit V1 layout |
 | | ESP32 DevKitC / NodeMCU-32S (38 pin) | Espressif DevKitC V4 layout |
 | | Waveshare ESP32-S3-LCD-1.47B | Built-in 1.47" LCD and RGB LED. Header order is drawn as a schematic, so wire by the printed GPIO numbers. |
+| | Waveshare ESP32-S3-LCD-1.69 | Built-in 1.69" LCD, RTC, IMU, buzzer and battery charger. V2 board pinout. Holds its own power on when running from the battery. |
+| | Waveshare ESP32-P4-ETH / ESP32-P4-POE-ETH | Wired Ethernet (PoE on the POE version) with DHCP, no Wi-Fi. No user LED or page button. Chip revisions v1.x and v3.x have separate firmware; the flasher asks which one. |
 | **Displays** | 0.96" SSD1306 OLED 128×64 (I²C) | Also works: 1.3" SH1106 (`"type":"sh1106"`) |
-| | Built-in ST7789 LCD 172×320 | On the Waveshare board |
+| | Built-in ST7789 LCD 172×320 / 240×280 | On the Waveshare 1.47B / 1.69 |
 | **Sensors** | HLK-LD2410B/C 24 GHz radar | UART (distance, moving/still energy) and/or OUT pin (presence) |
 | | VL53L0X laser distance (ToF) | I²C, shares the wires with the OLED. Can also count as presence below a set distance. |
 | **Layouts** | Basic | One row per reading with bars, presence on top, extra pages for more rows |
@@ -39,15 +41,15 @@ displays, layouts  pins, draw wiring          "sensors":[…], …}        start
    GPIO. I²C parts share one pair, UART parts get a free hardware UART, and plain signals get the
    first safe pin. Flash, PSRAM, USB and on-board pins are never used, and problems are explained.
    [`wiring.mjs`](site/wiring.mjs) draws the diagram.
-3. **Install**: ESP Web Tools picks the ESP32 or ESP32-S3 build from the chip it finds, then sets
-   up Wi-Fi over USB (Improv).
+3. **Install**: ESP Web Tools picks the ESP32, ESP32-S3 or ESP32-P4 build from the chip it finds,
+   then sets up Wi-Fi over USB (Improv). The ESP32-P4 has no Wi-Fi and uses Ethernet instead.
 4. **Send setup**: the page sends `config set {…}` over Web Serial. The firmware checks it (pins
    exist, aren't taken twice, aren't flash/USB), saves it and restarts. You can change parts later
    the same way, without reinstalling.
 
 The firmware ([`src/`](src/)) has no pin numbers built in, only a default per chip. On an ESP32
 that's the original wiring: OLED on 21/22, LD2410 on 16/17/27. On an ESP32-S3 it's the Waveshare
-LCD.
+1.47B's LCD, and on an ESP32-P4 it's the Waveshare ESP32-P4-ETH with nothing attached.
 
 ## Buttons
 
@@ -127,7 +129,7 @@ chip's flash. Erasing the board starts a new key at line 1.
 
 ## Adding hardware
 
-- **A board** with an ESP32 or ESP32-S3: add `catalog/boards/<id>.json` (see
+- **A board** with an ESP32, ESP32-S3 or ESP32-P4: add `catalog/boards/<id>.json` (see
   [catalog/README.md](catalog/README.md)). No firmware change.
 - **A sensor**: write a driver class in `src/sensors/` implementing `Sensor`
   ([sensor.h](src/sensors/sensor.h)). Add it to `makeSensor()`, accept its type in
@@ -144,19 +146,22 @@ defaults match what the configurator produces.
 ## Building
 
 ```sh
-pio run                      # both chips; images in .pio/build/<env>/presencecam-merged.bin
+pio run                      # ESP32 + ESP32-S3; images in .pio/build/<env>/presencecam-merged.bin
 pio run -e esp32 -t upload   # flash an ESP32 board directly
+PLATFORMIO_CORE_DIR=~/.platformio-p4 PLATFORMIO_BUILD_DIR=.pio/build-p4 pio run -e esp32p4 -e esp32p4r3
+                             # ESP32-P4 v1.x and v3.x: the pioarduino platform, kept in its own
+                             # core and build dirs because its packages clash with the ESP32 ones
 node --test site/test/*.test.mjs
 tools/serve.sh               # build, test and serve the flasher on port 8000
 ```
 
-**Testing locally:** `tools/serve.sh` builds both chips, runs the tests and serves the flasher at
+**Testing locally:** `tools/serve.sh` builds every chip, runs the tests and serves the flasher at
 `https://<this machine>:8765` with a self-signed certificate (USB in the browser needs https). The
 browser warns once: *Advanced → Proceed*.
 
 **Releasing:** GitHub Actions ([build.yml](.github/workflows/build.yml)) runs only for releases. Bump
 [`VERSION`](VERSION), commit, then `git tag vX.Y.Z && git push origin main vX.Y.Z`. It runs the tests,
-builds both chips, publishes the flasher to GitHub Pages and attaches the images to the release.
+builds every chip, publishes the flasher to GitHub Pages and attaches the images to the release.
 
 ## Project layout
 
@@ -172,7 +177,7 @@ src/
   buttons.*       BOOT gestures and RST multi-tap
   presence.*      hold time, present/clear events, status LED
   eventlog.*      signed, chained log
-  net.*           Wi-Fi, setup network, mDNS, Improv
+  net.*           Wi-Fi or Ethernet (ESP32-P4), setup network, mDNS, Improv
   web.*           web page and API (web_page.h is the dashboard)
   console.*       serial commands
 tools/            version, merged image, site assembly

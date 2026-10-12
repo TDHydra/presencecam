@@ -1,7 +1,6 @@
 #include "console.h"
 
 #include <Preferences.h>
-#include <WiFi.h>
 
 #include "config.h"
 #include "display.h"
@@ -64,9 +63,12 @@ static void status() {
   Serial.printf("  display   %s, layout %s\n", displayDescribe().c_str(), (const char*)(hw["layout"] | "basic"));
   Serial.printf("  settings  hold %us, max %ucm, screen sleep %us%s\n", settings.holdSeconds, settings.maxCm,
                 settings.screenSleepS, settings.screenFlip ? ", flipped" : "");
-  if (netConnected())
-    Serial.printf("  wifi      %s, %s, %d dBm, http://%s.local\n", WiFi.SSID().c_str(), netUrl().c_str(),
-                  WiFi.RSSI(), netHostname().c_str());
+  if (NET_WIRED)
+    Serial.printf("  network   %s\n", netConnected() ? (netLink() + ", " + netUrl() + ", http://" + netHostname() + ".local").c_str()
+                                                     : "Ethernet, no cable or no DHCP answer yet");
+  else if (netConnected())
+    Serial.printf("  wifi      %s, %s, %d dBm, http://%s.local\n", netLink().c_str(), netUrl().c_str(),
+                  netRssi(), netHostname().c_str());
   else
     Serial.printf("  wifi      not connected%s%s\n", settings.wifiSsid.length() ? ", trying " : "",
                   settings.wifiSsid.c_str());
@@ -138,7 +140,7 @@ static void run(String cmd) {
     Serial.println(netJoin(ssid, pass) ? "  connected: " + netUrl() : String("  could not connect (still trying)"));
   } else if (word == "forget") {
     settingsForgetWifi();
-    WiFi.disconnect(true);
+    netForget();
     Serial.println("  Wi-Fi forgotten; restarting into setup mode");
     delay(300);
     ESP.restart();

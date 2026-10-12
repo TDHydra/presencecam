@@ -18,9 +18,11 @@ const catalog = { boards: load("boards"), sensors: load("sensors"), displays: lo
 // The firmware's built-in defaults, read straight out of src/hwconfig.cpp
 function firmwareDefaults() {
   const src = readFileSync(join(root, "src", "hwconfig.cpp"), "utf8");
-  const block = src.slice(src.indexOf("#if CONFIG_IDF_TARGET_ESP32S3"), src.indexOf("#endif"));
-  const [s3, esp32] = block.split("#else").map((part) => JSON.parse([...part.matchAll(/R"\((.*?)\)"/g)].map((m) => m[1]).join("")));
-  return { s3, esp32 };
+  const block = src.slice(src.indexOf("#if CONFIG_IDF_TARGET_ESP32P4"), src.indexOf("#endif"));
+  const [p4, s3, esp32] = block
+    .split(/#elif .*|#else/)
+    .map((part) => JSON.parse([...part.matchAll(/R"\((.*?)\)"/g)].map((m) => m[1]).join("")));
+  return { p4, s3, esp32 };
 }
 
 const sensorSets = [
@@ -70,6 +72,11 @@ test("NodeMCU 30-pin + OLED + LD2410 matches the firmware's ESP32 default", () =
 test("Waveshare 1.47B with its LCD and no sensors matches the firmware's ESP32-S3 default", () => {
   const r = allocate(catalog, { board: "waveshare-s3-lcd-147b", display: "builtin", layout: "basic", sensors: [] });
   assert.deepEqual(r.config, firmwareDefaults().s3);
+});
+
+test("Waveshare ESP32-P4-ETH with nothing attached matches the firmware's ESP32-P4 default", () => {
+  const r = allocate(catalog, { board: "waveshare-p4-eth", display: "none", layout: "basic", sensors: [] });
+  assert.deepEqual(r.config, firmwareDefaults().p4);
 });
 
 test("the LD2410 needs 5 V and the OLED 3.3 V", () => {

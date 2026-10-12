@@ -90,6 +90,7 @@ export function allocate(catalog, sel) {
     led: board.led ?? -1,
     ...(board.ledType && board.ledType !== "gpio" ? { ledType: board.ledType } : {}),
     button: board.button ?? 0,
+    ...(board.powerHold != null ? { hold: board.powerHold } : {}),
     i2c: i2c || { sda: -1, scl: -1 },
     display: { type: "none" },
     layout: findById(catalog.layouts, sel.layout) ? sel.layout : catalog.layouts[0].id,
@@ -201,6 +202,7 @@ export function configPins(config) {
   const add = (what, g) => g >= 0 && out.push({ what, gpio: g });
   add("status LED", config.led);
   add("button", config.button);
+  add("power hold", config.hold ?? -1);
   add("I2C SDA", config.i2c.sda);
   add("I2C SCL", config.i2c.scl);
   if (config.display.type === "st7789") for (const k of ["mosi", "sclk", "cs", "dc", "rst", "bl"]) add("display " + k, config.display[k]);
