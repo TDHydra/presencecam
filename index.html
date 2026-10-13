@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PresenceCam Web Flasher</title>
+<meta name="description" content="Pick your board, sensors and display, get the wiring, and install PresenceCam from the browser.">
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#5d6677;--line:#e2e5eb;--acc:#2563eb;--acc-fg:#fff;--sel:#eef4ff;--warn:#b54708;--warn-bg:#fffaeb;--bad:#b42318;--bad-bg:#fef3f2}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1117;--card:#171b23;--fg:#e6e9ef;--mut:#99a1b0;--line:#2a303c;--acc:#5b8dff;--acc-fg:#fff;--sel:#1b2638;--warn:#fdb022;--warn-bg:#2a2010;--bad:#ff8a7a;--bad-bg:#2c1512}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:2rem;margin:8px 0 4px;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:0 0 12px;display:flex;gap:10px;align-items:center}
+h2 .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--acc);color:var(--acc-fg);font-size:.95rem;flex:none}
+p{margin:8px 0}.mut{color:var(--mut)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
+section.next{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
+.choices{display:grid;gap:8px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.choice:has(input:checked){border-color:var(--acc);background:var(--sel)}
+.choice input{margin-top:4px;flex:none}
+.choice small{display:block;color:var(--mut);font-size:.88rem;line-height:1.4;margin-top:2px}
+.sensor{display:grid;gap:4px}
+.sub{display:flex;gap:8px;align-items:center;margin-left:34px;font-size:.92rem;flex-wrap:wrap}
+.sub input[type=number]{width:90px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.cols{grid-template-columns:1fr}}
+h3{font-size:1rem;margin:4px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:.95rem}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.mono,code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.wiring{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
+.wiring svg{display:block;max-width:100%;height:auto;min-width:560px}
+.tw{overflow-x:auto}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;margin:8px 0}
+.note.bad{background:var(--bad-bg);color:var(--bad)}
+button,esp-web-install-button button{background:var(--acc);color:var(--acc-fg);border:0;border-radius:10px;padding:12px 22px;font:inherit;font-weight:700;cursor:pointer}
+button.sec{background:var(--line);color:var(--fg);padding:8px 14px;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.small{padding:5px 10px;font-size:.85rem}
+.field{display:block;margin:0 0 12px;font-weight:600}
+.field input:not([type=color]),td select{display:block;width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;font-weight:400}
+.field input[type=color]{vertical-align:middle;width:48px;height:32px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+td select{margin:0;padding:6px 8px}
+.chk{display:block;margin:4px 0;font-weight:400}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:12px 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--bg);border-radius:8px;padding:10px;margin:8px 0;max-height:220px;overflow:auto}
+details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+ul{padding-left:20px}li{margin:4px 0}
+footer{text-align:center;font-size:.9rem;margin-top:28px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>PresenceCam</h1>
+  <p class="mut">Sensor readings on a small screen and on the web, presence detection, and a tamper-evident event log. Pick your parts, wire them as shown, install. Firmware 2.0.0.</p>
+</header>
+
+<div id="configurator">
+<section>
+  <h2><span class="n">1</span>Board</h2>
+  <div class="choices" id="boards"></div>
+  <div id="netpick" hidden><h3>Network</h3><div class="choices" id="networks"></div></div>
+  <div id="sdpick" hidden><h3>Storage</h3><div class="choices" id="storages"></div></div>
+</section>
+
+<div class="cols">
+  <section style="margin:0">
+    <h2><span class="n">2</span>Display</h2>
+    <div class="choices" id="displays"></div>
+  </section>
+  <section style="margin:0">
+    <h2><span class="n">3</span>Layout</h2>
+    <div class="choices" id="layouts"></div>
+  </section>
+</div>
+
+<section>
+  <h2><span class="n">4</span>Sensors</h2>
+  <div class="choices" id="sensors"></div>
+</section>
+
+<section id="camsec" hidden>
+  <h2>Camera <span class="mut" style="font-weight:400;font-size:.8em">optional</span></h2>
+  <p class="mut">A rule on the device's web page can then take a photo when a reading crosses a value. Photos are kept on the board and shown on its web page.</p>
+  <div class="choices" id="cameras"></div>
+</section>
+</div>
+
+<section id="showsec">
+  <h2><span class="n">5</span>What to show where</h2>
+  <p class="mut">For each reading: on the board's screen, on its web page, both, or neither. Hidden readings still work in rules and on the serial console.</p>
+  <div class="tw"><table><thead><tr><th>Reading</th><th>Show on</th></tr></thead><tbody id="showtable"></tbody></table></div>
+</section>
+
+<section id="websec">
+  <h2><span class="n">6</span>The web page</h2>
+  <p class="mut">How the board's own page looks (open it at the address on the screen, or <code>http://presencecam-xxxx.local</code>).</p>
+  <div class="cols">
+    <div>
+      <label class="field">Title <input id="webtitle" data-web="title" maxlength="40" placeholder="the device name"></label>
+      <h3>Theme</h3><div class="choices" id="webtheme"></div>
+      <label class="field">Accent colour <input type="color" id="webaccent" data-web="accent" value="#2563eb"> <button class="sec small" type="button" id="webaccentreset">Default</button></label>
+    </div>
+    <div>
+      <h3>Readings</h3><div class="choices" id="webstyle"></div>
+      <h3>Sections</h3><div id="websections"></div>
+      <h3>Settings, network and firmware</h3><div class="choices" id="webadmin"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">7</span>Wire it</h2>
+  <div id="problems"></div>
+  <p class="mut" id="wiringnote"></p>
+  <div id="wiring-wrap"><div class="wiring" id="wiring"></div>
+    <div class="row"><button class="sec" id="dlsvg" type="button">Download diagram</button><button class="sec" type="button" onclick="print()">Print</button></div></div>
+  <div class="tw"><table><thead><tr><th>Part</th><th>Its pin</th><th>To board pin</th></tr></thead><tbody id="pintable"></tbody></table></div>
+  <p class="mut">Unplug USB while wiring. 5 V parts go to VIN/5V, everything else to 3V3. Signal pins on these parts are 3.3 V, so they connect straight to the ESP32.</p>
+</section>
+
+<section>
+  <h2><span class="n">8</span>Install the firmware</h2>
+  <p>The firmware is made here for your setup: the board, parts, pins, what shows where and the web page are all built in, so the board starts ready to go. <span class="mut" id="genstate"></span></p>
+  <p>Plug the board in with a USB <strong>data</strong> cable, click the button and pick the port (often called <em>CP210x</em>, <em>CH340</em>, <em>USB Serial</em> or <em>USB JTAG/serial</em>).</p>
+  <div class="row">
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Connect &amp; install</button>
+      <span slot="unsupported"><span class="note" style="display:block">Your browser can't talk to USB devices. Open this page in <strong>Chrome</strong> or <strong>Edge</strong> on a computer.</span></span>
+      <span slot="not-allowed"><span class="note" style="display:block">This page has to be opened over https to use USB.</span></span>
+    </esp-web-install-button>
+  </div>
+  <p class="mut" id="chipnote"></p>
+  <div id="corepick" hidden>
+    <p>Which Arduino core to build on. Core 3 is the default and the only one with Ethernet; core 2 is the older, long-tested one. Both have the same features otherwise.</p>
+    <label class="choice"><input type="radio" name="core" value="3"><span><b>Arduino core 3</b><small>Default</small></span></label>
+    <label class="choice"><input type="radio" name="core" value="2"><span><b>Arduino core 2</b><small id="core2note">Wi-Fi only</small></span></label>
+  </div>
+  <div id="p4rev" hidden>
+    <p>ESP32-P4 chips come in two revisions that need different firmware. The revision is printed on the chip (<em>v1.0</em>, <em>v1.3</em> or <em>v3.x</em>) and shown in the installer's log. If the board doesn't start after installing, install the other one.</p>
+    <label class="choice"><input type="radio" name="p4rev" value="1"><span><b>Revision v1.x</b><small>Most boards sold before 2026</small></span></label>
+    <label class="choice"><input type="radio" name="p4rev" value="3"><span><b>Revision v3.x</b></span></label>
+  </div>
+  <p class="mut" id="wifinote">On a new board, let it erase the device when asked. When it finishes it asks for your Wi-Fi name and password and sends them over the cable. Then close the installer window.</p>
+</section>
+
+<section id="step-send">
+  <h2>Already installed?</h2>
+  <p><strong>Update over Wi-Fi:</strong> download the firmware for this setup and upload it on the board's web page under <em>Firmware</em>. Settings and Wi-Fi stay.</p>
+  <div class="row"><button class="sec" id="dlota" type="button" disabled>Download update (.bin)</button><button class="sec" id="dlfull" type="button" disabled>Download full image (.bin, for esptool at 0x0)</button></div>
+  <p><strong>Or send just the setup over USB</strong>, without reinstalling. Use it whenever you change the parts.</p>
+  <div class="row"><button id="send" type="button">Send setup to board</button><span class="mut" id="sendstate"></span></div>
+  <pre id="sendlog" class="mono" aria-live="polite"></pre>
+  <details><summary>The setup as JSON</summary>
+    <p class="mut">It's what gets sent. You can also paste it into the serial console yourself: <code>config set {…}</code>.</p>
+    <pre id="config" class="mono"></pre><button class="sec" id="copycfg" type="button">Copy</button></details>
+</section>
+
+<section>
+  <h2>Using it</h2>
+  <ul>
+    <li><strong>Screen:</strong> the layout's pages of readings, then <em>Network</em> and <em>Device</em> pages.</li>
+    <li><strong>Web page:</strong> the address is on the Network page, or <code>http://presencecam-xxxx.local</code>. It has live readings, the verified event log, settings and firmware updates.</li>
+  </ul>
+  <h3>Buttons</h3>
+  <div class="tw"><table>
+    <tr><th>Press</th><th>Does</th></tr>
+    <tr><td>BOOT, short</td><td>Next screen page</td></tr>
+    <tr><td>BOOT, double</td><td>Dim / brighten the screen</td></tr>
+    <tr><td>BOOT, hold 3 s</td><td>Show the web address and a QR code</td></tr>
+    <tr><td>BOOT, hold 10 s</td><td>Forget Wi-Fi and restart into setup</td></tr>
+    <tr><td>RST, once</td><td>Restart (as always)</td></tr>
+    <tr><td>RST, twice quickly</td><td>Open the <em>PresenceCam-XXXX</em> setup network for 10 minutes</td></tr>
+    <tr><td>RST, three times quickly</td><td>Safe mode for one boot: ignores the setup, no sensors. Use it if a bad setup stops the board from starting.</td></tr>
+  </table></div>
+  <p class="mut">Holding BOOT while pressing RST or plugging in still starts the chip's download mode, for flashing.</p>
+</section>
+
+<section>
+  <h2>Troubleshooting</h2>
+  <details><summary>No port shows up</summary>
+    <p>Use a data cable; many USB cables only charge. Install the driver for your board's USB chip: <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers">CP210x</a> or <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html">CH340</a>. ESP32-S3 boards with native USB need no driver. On Linux, add yourself to the <code>dialout</code> group.</p></details>
+  <details><summary>"Failed to connect" or stuck at "Preparing"</summary>
+    <p>Hold <strong>BOOT</strong>, click <em>Connect &amp; install</em> again, and let go once the progress bar moves. Close the Arduino IDE or any serial monitor that may have the port open.</p></details>
+  <details><summary>"Send setup" says the board didn't answer</summary>
+    <p>Close the installer's <em>Logs &amp; console</em> window (only one program can use the port), wait for the board to finish starting, and send again. On some boards, press RST once first.</p></details>
+  <details><summary>The screen stays dark</summary>
+    <p>Check VCC to 3V3, GND, and that SDA and SCL aren't swapped. The board's web page and serial console (<code>status</code>) say whether the display was found.</p></details>
+  <details><summary>The LD2410 shows no distance</summary>
+    <p>TX and RX are crossed: the radar's TX goes to the ESP32's RX pin in the table above. Presence still works from OUT, without distance.</p></details>
+  <details><summary>Brownout resets / the board keeps restarting</summary>
+    <p>The Wi-Fi radio draws short spikes of 300–500 mA when it starts, and many NodeMCU boards can't hold 3.3 V through them on a weak USB supply. The firmware reacts by itself: after one brownout it restarts Wi-Fi at low power (8.5 dBm), and after two it leaves Wi-Fi off for that start and says so on the screen. The screen, sensors and console keep working. To fix the cause:</p>
+    <ul><li>Use a short, thick USB cable straight into the computer or a 5 V / 1 A+ charger, not a hub.</li>
+    <li>Solder or plug a <strong>470–1000 µF electrolytic capacitor across 3V3 and GND</strong> (stripe to GND). This fixes most boards.</li>
+    <li>The same weak power can make installs fail with "bad data checksum" (status 193). Fix the power, then install again.</li></ul>
+    <p>You can also pick the Wi-Fi power on the device's web page or with <code>txpower 8.5</code> in the console.</p></details>
+</section>
+
+<footer class="mut">Flashing uses <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>. Firmware files: <a href="firmware/presencecam-esp32.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32c3.bin">ESP32-C3</a>, <a href="firmware/presencecam-esp32c6.bin">ESP32-C6</a>, <a href="firmware/presencecam-esp32p4.bin">ESP32-P4 v1.x</a>, <a href="firmware/presencecam-esp32p4r3.bin">ESP32-P4 v3.x</a>, Arduino core 2: <a href="firmware/presencecam-esp32-core2.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-core2.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32c3-core2.bin">ESP32-C3</a> (full images, offset 0), and OTA updates for the device's web page: <a href="firmware/presencecam-esp32-ota.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-ota.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32c3-ota.bin">ESP32-C3</a>, <a href="firmware/presencecam-esp32c6-ota.bin">ESP32-C6</a>, <a href="firmware/presencecam-esp32p4-ota.bin">ESP32-P4 v1.x</a>, <a href="firmware/presencecam-esp32p4r3-ota.bin">ESP32-P4 v3.x</a>, Arduino core 2: <a href="firmware/presencecam-esp32-core2-ota.bin">ESP32</a>, <a href="firmware/presencecam-esp32s3-core2-ota.bin">ESP32-S3</a>, <a href="firmware/presencecam-esp32c3-core2-ota.bin">ESP32-C3</a>.</footer>
+</main>
+<script type="module">
+import { start } from "./configurator.mjs";
+start().catch((e) => {
+  document.getElementById("problems").innerHTML = '<div class="note bad">Could not load the parts list: ' + e.message + "</div>";
+});
+</script>
+</body>
+</html>
